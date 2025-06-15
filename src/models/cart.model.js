@@ -1,5 +1,18 @@
 import { Schema, Types, model } from "mongoose";
 
+const products = {
+    product_id: {
+        type: Types.ObjectId,
+        required: true,
+        ref: "Product"
+    },
+    quantity: {
+        type: Number,
+        required: true,
+        default: 1
+    }
+}
+
 const cartSchema = new Schema({
     user_id: {
         type: Types.ObjectId,
@@ -7,18 +20,7 @@ const cartSchema = new Schema({
         ref: "User"
     },
     products: [
-        {
-            product_id: {
-                type: Types.ObjectId,
-                required: true,
-                ref: "Product"
-            },
-            quantity: {
-                type: Number,
-                required: true,
-                default: 1
-            }
-        }
+        products
     ]
 
 }, {

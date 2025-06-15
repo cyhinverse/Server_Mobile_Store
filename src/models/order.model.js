@@ -25,7 +25,7 @@ const orderSchema = new Schema({
         ref: "User",
         required: true
     },
-    paymentId: {
+    payment_id: {
         type: Schema.Types.ObjectId,
         ref: "Payment"
     },
@@ -44,7 +44,7 @@ const orderSchema = new Schema({
         type: String,
         trim: true
     },
-    paymentMethod: {
+    payment_method: {
         type: String,
         enum: ["cod", "banking", "momo", "vnpay"],
         default: "cod"

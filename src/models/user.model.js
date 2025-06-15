@@ -46,8 +46,11 @@ const userSchema = new Schema({
     order_id: {
         type: Types.ObjectId,
         ref: "Order",
-        required: true
     },
+    cart_id: {
+        type: Types.ObjectId,
+        ref: "Cart",
+    }
 
 }, {
     timestamps: true,

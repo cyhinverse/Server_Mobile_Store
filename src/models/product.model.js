@@ -70,7 +70,25 @@ const productSchema = new Schema({
         required: true,
         unique: true,
         trim: true
-    }
+    },
+    isNew: {
+        type: Boolean,
+        default: false
+    },
+    provider: {
+        type: String,
+        enum: ["google", "facebook"]
+    },
+    provider_id: {
+        type: String,
+
+    },
+    qr_code: {
+        type: String,
+    },
+    qrExpiresAt: {
+        type: Date,
+    },
 
 }, {
     timestamps: true,
