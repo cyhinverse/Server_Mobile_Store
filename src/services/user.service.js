@@ -27,6 +27,12 @@ class UserService {
         const saltRounds = 10;
         return await bcrypt.hash(password, saltRounds);
     }
+    static async comparePassword(password, hashedPassword) {
+        if (!password || !hashedPassword) {
+            throw new Error("Password and hashed password are required to compare");
+        }
+        return await bcrypt.compare(password, hashedPassword);
+    }
 }
 
 export default UserService;
