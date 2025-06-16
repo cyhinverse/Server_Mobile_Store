@@ -33,6 +33,12 @@ class UserService {
         }
         return await bcrypt.compare(password, hashedPassword);
     }
+    static async getUserById(userId) {
+        if (!userId) {
+            throw new Error("User ID is required to get user");
+        }
+        return await User.findById(userId)
+    }
 }
 
 export default UserService;

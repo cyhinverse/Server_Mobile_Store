@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { catchAsync } from "../configs/catchAsync.js";
-import AuthValidation, { registerValidation } from "../validations/user.validation.js";
+import AuthValidation from "../validations/user.validation.js";
 import { StatusCodes } from "http-status-codes";
 import UserService from "../services/user.service.js";
 import GoogleStrategy from "passport-google-oauth20";
@@ -226,6 +226,58 @@ class AuthController {
         }
         return res.status(StatusCodes.OK).json({
             message: chalk.green("Password reset email sent successfully")
+        });
+    })
+    resetPassword = catchAsync(async (req, res) => {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(StatusCodes.BAD_REQUEST).json({
+                message: chalk.red("Token and new password are required")
+            });
+        }
+
+        const { error } = AuthValidation.resetPasswordValidation.validate({ token, newPassword });
+
+        if (error) {
+            return res.status(StatusCodes.BAD_REQUEST).json({
+                message: chalk.red(error.details[0].message)
+            });
+        }
+        const decoded = await authService.verifyResetToken(token);
+        if (!decoded) {
+            return res.status(StatusCodes.UNAUTHORIZED).json({
+                message: chalk.red("Invalid or expired token")
+            });
+        }
+        const user = await UserService.getUserById(decoded.id);
+        if (!user || user === null) {
+            return res.status(StatusCodes.NOT_FOUND).json({
+                message: chalk.red("User not found")
+            });
+        }
+        const hashedPassword = await UserService.hashPassword(newPassword);
+        if (!hashedPassword) {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+                message: chalk.red("Failed to hash new password")
+            });
+        }
+        user.password = hashedPassword;
+        const updatedUser = await user.save();
+        if (!updatedUser) {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+                message: chalk.red("Failed to update password")
+            });
+        }
+        return res.status(StatusCodes.OK).json({
+            message: chalk.green("Password reset successfully")
+        });
+    })
+    logout = catchAsync(async (req, res) => {
+        res.clearCookie('refreshToken');
+        res.clearCookie('accessToken');
+        return res.status(StatusCodes.OK).json({
+            message: chalk.green("Logout successful")
         });
     })
 }

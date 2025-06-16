@@ -16,6 +16,13 @@ class AuthService {
             expiresIn: '15m'
         });
     }
+    static async verifyResetToken(token) {
+        try {
+            return jwt.verify(token, process.env.RESET_TOKEN_SECRET);
+        } catch (error) {
+            throw new Error("Invalid or expired reset token");
+        }
+    }
 }
 
 export default AuthService;
