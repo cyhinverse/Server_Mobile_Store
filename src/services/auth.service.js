@@ -23,6 +23,16 @@ class AuthService {
             throw new Error("Invalid or expired reset token");
         }
     }
+    static async verifyRefreshToken(token) {
+        if (!token) {
+            throw new Error("Refresh token is required");
+        }
+        try {
+            return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+        } catch (error) {
+            throw new Error("Invalid or expired refresh token");
+        }
+    }
 }
 
 export default AuthService;

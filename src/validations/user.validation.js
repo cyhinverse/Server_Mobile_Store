@@ -1,31 +1,14 @@
 
-import Joi from "joi"
+import joi from "joi"
 
 
-
-
-const AuthValidation = {
-    registerValidation: Joi.object({
-        fullName: Joi.string().required().trim(),
-        dayOfBirth: Joi.date().required(),
-        email: Joi.string().email().required(),
-        phoneNumber: Joi.string().required(),
-        password: Joi.string().min(6).required(),
-        address: Joi.string().required().trim()
-    }),
-    loginValidation: Joi.object({
-        phoneNumber: Joi.string().required(),
-        password: Joi.string().min(6).required()
-    }),
-    forgotPasswordValidation: Joi.object({
-        email: Joi.string().email().required()
-    }),
-    resetPasswordValidation: Joi.object({
-        token: Joi.string().required(),
-        password: Joi.string().min(6).required(),
-        confirmPassword: Joi.string().valid(Joi.ref('password')).required()
-    }),
+const UserValidation = {
+    createUserValidation: joi.object({
+        fullName: joi.string().required().trim(),
+        email: joi.string().email().required(),
+        password: joi.string().min(6).required(),
+        roles: joi.array().items(joi.string()).required()
+    })
 }
 
-
-export default AuthValidation;
+export default UserValidation;
