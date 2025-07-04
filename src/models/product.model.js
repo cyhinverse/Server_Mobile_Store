@@ -131,6 +131,29 @@ const variantSchema = new Schema({
 	},
 });
 
+const productDetail = new Schema(
+	{
+		description: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		rating: {
+			type: Number,
+			default: 0,
+			min: 0,
+			max: 5,
+		},
+		images: {
+			type: [String],
+			required: true,
+		},
+
+		variants: [variantSchema],
+	},
+	{ _id: false }
+);
+
 const productSchema = new Schema(
 	{
 		name: {
@@ -142,6 +165,10 @@ const productSchema = new Schema(
 			type: String,
 			required: true,
 			trim: true,
+		},
+		price: {
+			type: String,
+			required: true,
 		},
 		thumbnail: {
 			type: String,
@@ -178,48 +205,13 @@ const productSchema = new Schema(
 			type: Boolean,
 			default: false,
 		},
-		detail_id: {
-			type: Types.ObjectId,
-			ref: 'ProductDetail',
-		},
-		createdAt: {
-			type: Date,
-			default: Date.now,
-		},
-		updatedAt: {
-			type: Date,
-			default: Date.now,
-		},
+		product_detail: productDetail,
 	},
 	{
 		timestamps: true,
 		collection: 'products',
 	}
 );
-
-const productDetailSchema = new Schema({
-	product_id: {
-		ref: 'Product',
-		type: Types.ObjectId,
-	},
-	description: {
-		type: String,
-		required: true,
-		trim: true,
-	},
-	rating: {
-		type: Number,
-		default: 0,
-		min: 0,
-		max: 5,
-	},
-	images: {
-		type: [String],
-		required: true,
-	},
-
-	variants: [variantSchema],
-});
 
 productSchema.pre('save', function (next) {
 	if (!this.slug && this.name) {
@@ -232,5 +224,4 @@ productSchema.pre('save', function (next) {
 });
 
 const Product = model('Product', productSchema);
-const ProductDetail = model('ProductDetail', productDetailSchema);
-export { Product, ProductDetail };
+export default Product;

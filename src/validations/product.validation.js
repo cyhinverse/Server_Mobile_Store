@@ -44,6 +44,30 @@ const ValidationProduct = {
 			'any.required': 'Detail ID is required',
 		}),
 	}),
+	updateProduct: joi.object({
+		name: joi.string().optional(),
+		thumbnail: joi.string().uri().optional(),
+		stock: joi.number().integer().min(0).optional(),
+		sold: joi.number().integer().min(0).optional(),
+		status: joi.string().valid('active', 'out_of_stock', 'disabled').optional(),
+		category_id: joi.string().optional(),
+		isNew: joi.boolean().optional(),
+		detail_id: joi.string().optional(),
+	}),
+	filterProducts: joi.object({
+		name: joi.string().optional(),
+		maxPrice: joi.number().optional(),
+		minPrice: joi.number().optional(),
+		isNew: joi.boolean().optional(),
+		color: joi.string().optional(),
+		rating: joi.number().min(0).max(5).optional(),
+		isFeatured: joi.boolean().optional(),
+		storage: joi.string().optional(),
+		chipset: joi.string().optional(),
+		ram: joi.string().optional(),
+		battery: joi.string().optional(),
+		os: joi.string().optional(),
+	}),
 };
 
 export default ValidationProduct;
