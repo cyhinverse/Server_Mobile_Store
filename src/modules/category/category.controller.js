@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
-import { catchAsync } from '../configs/catchAsync';
-import categoryService from '../services/category.service';
+import { catchAsync } from '../../configs/catchAsync.js';
+import categoryService from '../category.service.js';
 import chalk from 'chalk';
-import { ValidationCategory } from '../validations/category.validation';
+import { ValidationCategory } from '../category.validation.js';
 
 class CategoryController {
 	constructor() {

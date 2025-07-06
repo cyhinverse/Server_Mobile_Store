@@ -1,6 +1,6 @@
 import express from 'express';
-import { upload } from '../configs/config.upload';
-import ProductController from '../controllers/product.controller';
+import { upload } from '../../configs/config.upload.js';
+import ProductController from './product.controller.js';
 
 const router = express.Router();
 

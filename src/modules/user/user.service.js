@@ -1,4 +1,4 @@
-import User from '../models/user.model.js';
+import User from './user.model.js';
 import bcrypt from 'bcrypt';
 
 class UserService {

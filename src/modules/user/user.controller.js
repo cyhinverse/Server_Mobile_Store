@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
-import { catchAsync } from '../configs/catchAsync.js';
-import UserService from '../services/user.service.js';
-import UserValidation from '../validations/user.validation.js';
+import { catchAsync } from '../../configs/catchAsync.js';
+import UserService from './user.service.js';
+import UserValidation from './user.validation.js';
 import chalk from 'chalk';
 
 class UserController {

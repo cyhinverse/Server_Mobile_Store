@@ -1,4 +1,4 @@
-import WishList from '../models/wishlist.model.js';
+import WishList from '../wishlist.model.js';
 
 class WishlistService {
 	constructor() {
@@ -29,7 +29,6 @@ class WishlistService {
 					product_id: productId,
 					quantity: 1,
 			  });
-
 		return wishlist.save();
 	};
 	updateWishList = async (userId, productId, quantity) => {

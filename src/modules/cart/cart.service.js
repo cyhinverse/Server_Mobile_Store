@@ -1,5 +1,5 @@
-import cart from '../models/cart.model.js';
-import { catchAsync } from '../configs/catchAsync.js';
+import cart from '../cart.model.js';
+import { catchAsync } from '../../configs/catchAsync.js';
 
 class CartService {
 	constructor() {
@@ -53,6 +53,16 @@ class CartService {
 		}
 		return updatedCart;
 	});
+	async clearCartByUserId(userId) {
+		if (!userId || userId === undefined) {
+			throw new Error('User ID is required');
+		}
+		const result = await this.model.deleteMany({ user_id: userId });
+		if (result.deletedCount === 0) {
+			throw new Error('No cart items found for the user');
+		}
+		return result;
+	}
 }
 
 export default new CartService();

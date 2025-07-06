@@ -1,8 +1,8 @@
-import { catchAsync } from '../configs/catchAsync';
+import { catchAsync } from '../../configs/catchAsync.js';
 import chalk from 'chalk';
 import { StatusCodes } from 'http-status-codes';
-import ProductService from '../services/product.service.js';
-import ValidationProduct from '../validations/product.validation.js';
+import ProductService from '../product.service.js';
+import ValidationProduct from '../product.validation.js';
 
 class ProductController {
 	constructor() {

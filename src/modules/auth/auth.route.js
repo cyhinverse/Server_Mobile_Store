@@ -1,7 +1,7 @@
 import express from 'express';
 import passport from 'passport';
-import authController from '../controllers/auth.controller.js';
-import { litmitRate } from '../middlewares/litmitRate.js';
+import authController from './auth.controller.js';
+import { litmitRate } from '../../middlewares/litmitRate.js';
 
 const router = express.Router();
 

@@ -1,13 +1,13 @@
 import chalk from 'chalk';
-import { catchAsync } from '../configs/catchAsync.js';
-import AuthValidation from '../validations/auth.validation.js';
+import { catchAsync } from '../../configs/catchAsync.js';
+import AuthValidation from './auth.validation.js';
 import { StatusCodes } from 'http-status-codes';
-import UserService from '../services/user.service.js';
+import UserService from '../user/user.service.js';
 import GoogleStrategy from 'passport-google-oauth20';
 GoogleStrategy.Strategy;
 import jwt from 'jsonwebtoken';
-import authService from '../services/auth.service.js';
-import { transporter } from '../configs/config.nodemailer.js';
+import authService from './auth.service.js';
+import { transporter } from '../../configs/config.nodemailer.js';
 
 class AuthController {
 	register = catchAsync(async (req, res) => {

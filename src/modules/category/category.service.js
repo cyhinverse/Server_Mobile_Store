@@ -1,5 +1,5 @@
-import { catchAsync } from '../configs/catchAsync.js';
-import category from '../models/category.model.js';
+import { catchAsync } from '../../configs/catchAsync.js';
+import category from '../category.model.js';
 
 class CategoryService {
 	constructor() {
