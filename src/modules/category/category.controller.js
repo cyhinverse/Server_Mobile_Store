@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
-import categoryService from '../category.service.js';
+import categoryService from './category.service.js';
 import chalk from 'chalk';
-import { ValidationCategory } from '../category.validation.js';
+import { ValidationCategory } from './category.validation.js';
 
 class CategoryController {
 	constructor() {
@@ -100,6 +100,98 @@ class CategoryController {
 		return res.status(StatusCodes.OK).json({
 			message: chalk.green('Category updated successfully'),
 			data: updateCategory,
+		});
+	});
+	getAllCategories = catchAsync(async (req, res) => {
+		const categories = await this.categoryService.getAllCategories();
+		if (!categories || categories.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('No categories found'),
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('All categories fetched successfully'),
+			data: categories,
+		});
+	});
+
+	getTreeCategories = catchAsync(async (req, res) => {
+		const tree = await this.categoryService.getTreeCategories();
+		if (!tree || tree.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('No tree categories found'),
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Tree categories fetched successfully'),
+			data: tree,
+		});
+	});
+
+	getCategoryById = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		if (!id || id === 'undefined') {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Category ID is required!'),
+			});
+		}
+		let _validationCategory = ValidationCategory.getCategoryById;
+		const { error } = _validationCategory.validate({ id });
+		if (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red(error.details[0].message),
+			});
+		}
+		const category = await this.categoryService.getCategoryById(id);
+		if (!category) {
+			return res
+				.status(StatusCodes.NOT_FOUND)
+				.json({ message: chalk.red('Category not found') });
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Category fetched successfully'),
+			data: category,
+		});
+	});
+
+	getCategoryBySlug = catchAsync(async (req, res) => {
+		const { slug } = req.params;
+		if (!slug) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Category slug is required!'),
+			});
+		}
+		let _validationCategory = ValidationCategory.getCategoryBySlug;
+		const { error } = _validationCategory.validate({ slug });
+		if (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red(error.details[0].message),
+			});
+		}
+		const category = await this.categoryService.getCategoryBySlug(slug);
+		if (!category) {
+			return res
+				.status(StatusCodes.NOT_FOUND)
+				.json({ message: chalk.red('Category not found') });
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Category fetched successfully'),
+			data: category,
+		});
+	});
+
+	getCategoriesPaginated = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10, search = '' } = req.query;
+
+		const paginationData = await this.categoryService.getCategoriesPaginated({
+			page: parseInt(page),
+			limit: parseInt(limit),
+			search,
+		});
+
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Categories fetched with pagination successfully'),
+			...paginationData,
 		});
 	});
 }

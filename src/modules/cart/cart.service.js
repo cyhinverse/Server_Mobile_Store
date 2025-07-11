@@ -1,4 +1,4 @@
-import cart from '../cart.model.js';
+import cart from './cart.model.js';
 import { catchAsync } from '../../configs/catchAsync.js';
 
 class CartService {

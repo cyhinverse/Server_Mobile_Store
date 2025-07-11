@@ -1,8 +1,8 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import chalk from 'chalk';
 import { StatusCodes } from 'http-status-codes';
-import ProductService from '../product.service.js';
-import ValidationProduct from '../product.validation.js';
+import ProductService from './product.service.js';
+import ValidationProduct from './product.validation.js';
 
 class ProductController {
 	constructor() {
@@ -10,63 +10,40 @@ class ProductController {
 		ProductController.instance = this;
 	}
 	createProduct = catchAsync(async (req, res) => {
-		const {
-			name,
-			thumbnail,
-			stock,
-			sold,
-			status,
-			category_id,
-			isNew,
-			detail_id,
-		} = req.body;
-		if (
-			!name ||
-			!thumbnail ||
-			!category_id ||
-			!isNew ||
-			!detail_id ||
-			!stock ||
-			!sold ||
-			!status
-		) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('All fields are required'),
-				success: false,
-			});
-		}
-		const productData = {
-			name,
-			thumbnail,
-			stock,
-			sold,
-			status,
-			category_id,
-			isNew,
-			detail_id,
-		};
-		const { error } = ValidationProduct.createProduct.validate(productData);
+		const { error, value } = ValidationProduct.createProduct.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
+
 		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: chalk.red('Validation failed'),
+				errors: errorMessages,
 				success: false,
 			});
 		}
 
-		const newProduct = await ProductService.creatProduct(productData);
+		const newProduct = await ProductService.createProduct(value);
 
-		if (!newProduct || newProduct === null) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+		if (!newProduct) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				message: chalk.red('Failed to create product'),
 				success: false,
 			});
 		}
+
 		return res.status(StatusCodes.CREATED).json({
 			message: chalk.green('Product created successfully'),
 			success: true,
 			data: newProduct,
 		});
 	});
+
 	deleteProduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		if (!id && id === undefined) {
@@ -118,14 +95,14 @@ class ProductController {
 			sold,
 			status,
 			category_id,
-			isNew,
+			isNewProduct,
 			detail_id,
 		} = req.body;
 		if (
 			!name ||
 			!thumbnail ||
 			!category_id ||
-			!isNew ||
+			!isNewProduct ||
 			!detail_id ||
 			!stock ||
 			!sold ||
@@ -144,7 +121,7 @@ class ProductController {
 			sold,
 			status,
 			category_id,
-			isNew,
+			isNewProduct,
 			detail_id,
 			id,
 		};
@@ -219,7 +196,7 @@ class ProductController {
 			name,
 			maxPrice,
 			minPrice,
-			isNew,
+			isNewProduct,
 			color,
 			rating,
 			isFeatured,
@@ -235,7 +212,7 @@ class ProductController {
 			name,
 			maxPrice,
 			minPrice,
-			isNew,
+			isNewProduct,
 			color,
 			rating,
 			isFeatured,
@@ -280,6 +257,52 @@ class ProductController {
 		}
 		const products = await ProductService.getProductsBySlug(slug);
 	});
+	getProductDetails = catchAsync(async (req, res) => {
+		const { slug } = req.params;
+		if (!slug || slug === undefined) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Slug is required'),
+				success: false,
+			});
+		}
+		const productDetails = await ProductService.getProductDetails(slug);
+		if (!productDetails || productDetails === null) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Product details not found'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Product details retrieved successfully'),
+			success: true,
+			data: productDetails,
+		});
+	});
+	updateDetailForPorduct = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { data } = req.body;
+		if (!data || !id) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID and data are required'),
+				success: false,
+			});
+		}
+		const updatedProduct = await ProductService.updateDetailForPorduct(
+			id,
+			data
+		);
+		if (!updatedProduct || updatedProduct === null) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Product not found'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Product details updated successfully'),
+			success: true,
+			data: updatedProduct,
+		});
+	});
 }
 
-export default ProductController;
+export default new ProductController();

@@ -7,17 +7,13 @@ const wishListSchema = new Schema(
 			ref: 'User',
 			required: true,
 		},
+
 		products: [
 			{
 				product_id: {
 					type: Schema.Types.ObjectId,
 					ref: 'Product',
 					required: true,
-				},
-				quantity: {
-					type: Number,
-					default: 1,
-					min: 1,
 				},
 			},
 		],

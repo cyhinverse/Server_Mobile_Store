@@ -16,4 +16,5 @@ router.get(
 	passport.authenticate('google', { failureRedirect: '/login' }),
 	authController.loginWithGoogle
 );
+router.get('/logout', authController.logout);
 export default router;

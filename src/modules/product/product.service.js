@@ -1,9 +1,9 @@
-import product from '../product.model.js';
+import { Product } from './product.model.js';
 
 class ProductService {
 	constructor() {
 		if (ProductService.instance) return ProductService.instance;
-		this.model = product;
+		this.model = Product;
 		ProductService.instance = this;
 	}
 
@@ -11,7 +11,10 @@ class ProductService {
 		if (!productData) {
 			throw new Error('Product data is required');
 		}
-		const newProduct = new this.model(productData);
+		const newProduct = await this.model.create(productData);
+		if (!newProduct || newProduct === null) {
+			throw new Error('Failed to create product');
+		}
 		return await newProduct.save();
 	}
 
@@ -90,7 +93,7 @@ class ProductService {
 			name,
 			maxPrice,
 			minPrice,
-			isNew,
+			isNewProduct,
 			color,
 			rating,
 			isFeatured,
@@ -115,9 +118,9 @@ class ProductService {
 			if (maxPrice) query.price.$lte = maxPrice;
 		}
 
-		// Cờ isNew và isFeatured
-		if (isNew !== undefined) {
-			query.isNew = isNew;
+		// Cờ isNewProduct và isFeatured
+		if (isNewProduct !== undefined) {
+			query.isNewProduct = isNewProduct;
 		}
 		if (isFeatured !== undefined) {
 			query.isFeatured = isFeatured;
@@ -177,7 +180,7 @@ class ProductService {
 		};
 	}
 
-	async getProductsBySlug(slug) {
+	async getProductDetails(slug) {
 		if (!slug || slug.trim() === '') {
 			throw new Error('Slug is required');
 		}
@@ -186,6 +189,42 @@ class ProductService {
 			throw new Error('No products found for this slug');
 		}
 		return products;
+	}
+	async updateProduct(id, data) {
+		if (!id || !data) {
+			throw new Error('Product ID and data are required');
+		}
+
+		const product = await this.model.findById(id);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		if (Array.isArray(data)) {
+			const updated = await this.model.findByIdAndUpdate(
+				id,
+				{ 'productDetail.variants': data },
+				{ new: true }
+			);
+			if (!updated) throw new Error('Failed to update product variants');
+			return updated;
+		}
+
+		if (typeof data === 'object') {
+			const updated = await this.model.findByIdAndUpdate(
+				id,
+				{ productDetail: data },
+				{ new: true }
+			);
+			if (!updated) throw new Error('Failed to update product details');
+			return updated;
+		}
+
+		const updated = await this.model.findByIdAndUpdate(id, data, {
+			new: true,
+		});
+		if (!updated) throw new Error('Failed to update product');
+		return updated;
 	}
 }
 

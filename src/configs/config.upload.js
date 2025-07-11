@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
-dotenv.config();
 import fs from 'fs';
 import { StatusCodes } from 'http-status-codes';
 import multer from 'multer';
+
+dotenv.config();
 
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,36 +13,38 @@ cloudinary.config({
 	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+	destination: function (req, file, cb) {
+		cb(null, 'uploads/'); // thư mục lưu file tạm
+	},
+	filename: function (req, file, cb) {
+		cb(null, Date.now() + '-' + file.originalname);
+	},
+});
 export const upload = multer({ storage });
 
-(async function (req, res) {
-	if (!req.file) {
-		return res.status(StatusCodes.BAD_REQUEST).json({
-			message: chalk.red('No file uploaded'),
-		});
-	}
-	const uploadImage = cloudinary.uploader
-		.upload(req.file.path)
-		.catch((error) => {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
+export const uploadImage = async (req, res) => {
+	try {
+		if (!req.file) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('No file uploaded'),
 			});
+		}
+
+		const result = await cloudinary.uploader.upload(req.file.path);
+		fs.unlink(req.file.path, (error) => {
+			if (error) {
+				console.error(chalk.red('Error deleting file:', error));
+			}
 		});
-	if (!uploadImage) {
+
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Image uploaded successfully'),
+			url: result.secure_url,
+		});
+	} catch (error) {
 		return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-			message: chalk.red('Failed to upload image'),
+			message: chalk.red(error.message),
 		});
 	}
-	fs.unlinkSync(req.file.path, (error) => {
-		if (error) {
-			console.error(chalk.red('Error deleting file:', error));
-		} else {
-			console.log(chalk.green('File deleted successfully'));
-		}
-	});
-	return res.status(StatusCodes.OK).json({
-		message: chalk.green('Image uploaded successfully'),
-		url: uploadImage.secure_url,
-	});
-})();
+};

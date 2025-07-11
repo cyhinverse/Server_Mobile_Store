@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import cartService from './cart.service.js';
-import CartValidation from '../cart.validation.js';
+import CartValidation from './cart.validation.js';
 import chalk from 'chalk';
 class CartController {
 	constructor() {
