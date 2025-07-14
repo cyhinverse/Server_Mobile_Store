@@ -45,13 +45,8 @@ class ProductController {
 	});
 
 	deleteProduct = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		if (!id && id === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID is required'),
-				success: false,
-			});
-		}
+		const { id } = req.query;
+		console.log(`checking id: ${id}`);
 		const deletedProduct = await ProductService.deleteProduct(id);
 		if (!deletedProduct) {
 			return res.status(StatusCodes.NOT_FOUND).json({
@@ -62,7 +57,6 @@ class ProductController {
 		return res.status(StatusCodes.OK).json({
 			message: chalk.green('Product deleted successfully'),
 			success: true,
-			data: deletedProduct,
 		});
 	});
 	getProductById = catchAsync(async (req, res) => {
@@ -190,6 +184,17 @@ class ProductController {
 			});
 		}
 		const products = await ProductService.searchProducts(input);
+		if (!products || products.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('No products found matching the search criteria'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Products found successfully'),
+			success: true,
+			data: products,
+		});
 	});
 	filterProducts = catchAsync(async (req, res) => {
 		const {
@@ -287,10 +292,7 @@ class ProductController {
 				success: false,
 			});
 		}
-		const updatedProduct = await ProductService.updateDetailForPorduct(
-			id,
-			data
-		);
+		const updatedProduct = await ProductService.updateProduct(id, data);
 		if (!updatedProduct || updatedProduct === null) {
 			return res.status(StatusCodes.NOT_FOUND).json({
 				message: chalk.red('Product not found'),
@@ -301,6 +303,49 @@ class ProductController {
 			message: chalk.green('Product details updated successfully'),
 			success: true,
 			data: updatedProduct,
+		});
+	});
+	getListVariantForProduct = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		if (!id || id === undefined) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID is required'),
+				success: false,
+			});
+		}
+		const variants = await ProductService.getListVariantForProduct(id);
+		if (!variants || variants.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('No variants found for this product'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Variants retrieved successfully'),
+			success: true,
+			data: variants,
+		});
+	});
+	getVariantById = catchAsync(async (req, res) => {});
+	checkStock = catchAsync(async (req, res) => {
+		const { productId, quantity } = req.body;
+		if (!productId || !quantity) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID and quantity are required'),
+				success: false,
+			});
+		}
+		const isAvailable = await ProductService.checkStock(productId, quantity);
+		if (!isAvailable) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Insufficient stock for the requested product'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Stock is available'),
+			success: true,
+			data: isAvailable,
 		});
 	});
 }

@@ -49,7 +49,7 @@ const orderSchema = new Schema(
 		},
 		payment_method: {
 			type: String,
-			enum: ['cod', 'banking', 'momo', 'vnpay'],
+			enum: ['cod', 'banking', 'vnpay'],
 			default: 'cod',
 		},
 	},

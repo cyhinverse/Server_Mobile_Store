@@ -1,4 +1,4 @@
-import { Product } from './product.model.js';
+import Product from './product.model.js';
 
 class ProductService {
 	constructor() {
@@ -17,18 +17,17 @@ class ProductService {
 		}
 		return await newProduct.save();
 	}
-
-	async deleteProduct(productId) {
-		if (!productId) {
+	async deleteProduct(id) {
+		if (!id) {
 			throw new Error('Product ID is required');
 		}
-		const productExists = await this.model.findById(productId);
+		const productExists = await this.model.findById(id);
+
 		if (!productExists) {
 			throw new Error('Product not found');
 		}
-		return await this.model.findByIdAndDelete(productId);
+		return await this.model.findByIdAndDelete(id);
 	}
-
 	async updateProduct(data) {
 		if (!data) {
 			throw new Error('Product data is required');
@@ -43,7 +42,6 @@ class ProductService {
 		}
 		return await this.model.findByIdAndUpdate(id, productData, { new: true });
 	}
-
 	async getAllProducts() {
 		const products = await this.model.find();
 		if (!products.length) {
@@ -51,7 +49,6 @@ class ProductService {
 		}
 		return products;
 	}
-
 	async getProductByCategory(categoryId) {
 		if (!categoryId) {
 			throw new Error('Category ID is required');
@@ -62,7 +59,6 @@ class ProductService {
 		}
 		return products;
 	}
-
 	async searchProducts(input) {
 		if (!input || input.trim() === '') {
 			throw new Error('Search input is required');
@@ -179,7 +175,6 @@ class ProductService {
 			limit,
 		};
 	}
-
 	async getProductDetails(slug) {
 		if (!slug || slug.trim() === '') {
 			throw new Error('Slug is required');
@@ -225,6 +220,38 @@ class ProductService {
 		});
 		if (!updated) throw new Error('Failed to update product');
 		return updated;
+	}
+	async checkStock(productId, quantity) {
+		if (!productId || !quantity) {
+			throw new Error('Product ID and quantity are required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		const stock = product.stock || 0;
+		if (stock < quantity) {
+			throw new Error('Insufficient stock for the requested product');
+		}
+		return true;
+	}
+	async deductStock(productId, quantity) {
+		if (!productId || !quantity) {
+			throw new Error('Product ID and quantity are required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		if (product.stock < quantity) {
+			throw new Error('Insufficient stock to deduct');
+		}
+		product.stock -= quantity;
+		const updatedProduct = await product.save();
+		if (!updatedProduct) {
+			throw new Error('Failed to deduct stock');
+		}
+		return updatedProduct;
 	}
 }
 
