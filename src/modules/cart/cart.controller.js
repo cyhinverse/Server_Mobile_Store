@@ -2,7 +2,6 @@ import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import cartService from './cart.service.js';
 import CartValidation from './cart.validation.js';
-import chalk from 'chalk';
 class CartController {
 	constructor() {
 		this.cartService = cartService;
@@ -11,7 +10,7 @@ class CartController {
 		const { userId, productId, quantity } = req.body;
 		if (!userId || !productId || !quantity) {
 			return res.status(400).json({
-				message: chalk.red('User ID, Product ID, and Quantity are required!'),
+				message: 'User ID, Product ID, and Quantity are required!',
 			});
 		}
 		let _CartValidation = CartValidation.createCart;
@@ -28,18 +27,18 @@ class CartController {
 		});
 		if (cart === null || !cart) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Cart could not be created!'),
+				message: 'Cart could not be created!',
 			});
 		}
 		return res.status(StatusCodes.CREATED).json({
-			message: chalk.green('Cart created successfully!'),
+			message: 'Cart created successfully!',
 		});
 	});
 	deleteCart = catchAsync(async (req, res) => {
 		const { userId, productId } = req.body;
 		if (!userId || !productId) {
 			return res.status(400).json({
-				message: chalk.red('User ID and Product ID are required!'),
+				message: 'User ID and Product ID are required!',
 			});
 		}
 		const _CartValidation = CartValidation.deleteCart;
@@ -55,25 +54,25 @@ class CartController {
 		});
 		if (cart === null || !cart) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Cart not found or could not be deleted!'),
+				message: 'Cart not found or could not be deleted!',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Cart deleted successfully!'),
+			message: 'Cart deleted successfully!',
 		});
 	});
 	updateCart = catchAsync(async (req, res) => {
 		const { userId, productId, quantity } = req.body;
 		if (!userId || !productId || !quantity) {
 			return res.status(400).json({
-				message: chalk.red('User ID, Product ID, and Quantity are required!'),
+				message: 'User ID, Product ID, and Quantity are required!',
 			});
 		}
 		const _CartValidation = CartValidation.createCart;
 		const { error } = _CartValidation.validate(req.body);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 		const cart = await cartService.updateCart({
@@ -83,28 +82,28 @@ class CartController {
 		});
 		if (cart === null || !cart) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Cart not found or could not be updated!'),
+				message: 'Cart not found or could not be updated!',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Cart updated successfully!'),
+			message: 'Cart updated successfully!',
 		});
 	});
 	getCart = catchAsync(async (req, res) => {
 		const { userId } = req.params;
 		if (!userId || userId === undefined) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('User ID is required!'),
+				message: 'User ID is required!',
 			});
 		}
 		const cartItems = await cartService.getCartByUserId(userId);
 		if (cartItems === null || !cartItems) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Cart not found or could not be retrieved!'),
+				message: 'Cart not found or could not be retrieved!',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Cart retrieved successfully!'),
+			message: 'Cart retrieved successfully!',
 			data: cartItems,
 		});
 	});
@@ -112,21 +111,21 @@ class CartController {
 		const { userId } = req.params;
 		if (!userId || userId === undefined) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('User ID is required!'),
+				message: 'User ID is required!',
 			});
 		}
 		const cartItems = await cartService.clearCartByUserId(userId);
 		if (cartItems === null || !cartItems) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Cart not found or could not be cleared!'),
+				message: 'Cart not found or could not be cleared!',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Cart cleared successfully!'),
+			message: 'Cart cleared successfully!',
 			data: cartItems,
 		});
 	});
-	addMultipleItemsToCart = catchAsync(async (req, res) => {});
+	addMultipleItemsToCart = catchAsync(async (req, res) => { });
 }
 
 export default new CartController();

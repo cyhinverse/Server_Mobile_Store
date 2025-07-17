@@ -3,21 +3,12 @@ import { Schema, model, Types } from 'mongoose';
 const priceSchema = new Schema(
 	{
 		originalPrice: { type: Number, required: true, min: 0 },
-		discountedPrice: { type: Number, min: 0 },
-		discountType: {
-			type: String,
-			enum: ['percentage', 'fixed'],
-			default: 'percentage',
-		},
-		discountValue: { type: Number, min: 0 },
-		discountStartDate: { type: Date },
-		discountEndDate: { type: Date },
-		discountCode: { type: String, trim: true },
-		discountDescription: { type: String, trim: true },
 		currency: { type: String, enum: ['VND'], default: 'VND' },
 	},
 	{ _id: false }
 );
+
+
 
 const variantSchema = new Schema(
 	{

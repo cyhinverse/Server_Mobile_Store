@@ -2,10 +2,24 @@ import { Schema, model } from 'mongoose';
 
 const orderItemSchema = new Schema(
 	{
-		product_id: {
+		variant_id: {
 			type: Schema.Types.ObjectId,
-			ref: 'Product',
+			ref: 'Variant',
 			required: true,
+		},
+		name: {
+			type: String,
+			required: true,
+		},
+		image: {
+			type: String,
+			required: true,
+		},
+		color: {
+			type: String,
+		},
+		storage: {
+			type: String,
 		},
 		quantity: {
 			type: Number,
@@ -13,9 +27,19 @@ const orderItemSchema = new Schema(
 			min: 1,
 		},
 		price: {
-			type: Number,
-			required: true,
-			min: 0,
+			originalPrice: {
+				type: Number,
+				required: true,
+				min: 0,
+			},
+			discountedPrice: {
+				type: Number,
+				required: true,
+				min: 0,
+			},
+			discountCode: {
+				type: String,
+			},
 		},
 	},
 	{ _id: false }

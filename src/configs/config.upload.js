@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -15,7 +15,7 @@ cloudinary.config({
 
 const storage = multer.diskStorage({
 	destination: function (req, file, cb) {
-		cb(null, 'uploads/'); // thư mục lưu file tạm
+		cb(null, 'uploads/');
 	},
 	filename: function (req, file, cb) {
 		cb(null, Date.now() + '-' + file.originalname);
@@ -27,24 +27,24 @@ export const uploadImage = async (req, res) => {
 	try {
 		if (!req.file) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('No file uploaded'),
+				message: 'No file uploaded',
 			});
 		}
 
 		const result = await cloudinary.uploader.upload(req.file.path);
 		fs.unlink(req.file.path, (error) => {
 			if (error) {
-				console.error(chalk.red('Error deleting file:', error));
+				console.error('Error deleting file:', error);
 			}
 		});
 
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Image uploaded successfully'),
+			message: 'Image uploaded successfully',
 			url: result.secure_url,
 		});
 	} catch (error) {
 		return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-			message: chalk.red(error.message),
+			message: error.message,
 		});
 	}
 };

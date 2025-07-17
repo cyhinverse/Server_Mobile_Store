@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import categoryService from './category.service.js';
-import chalk from 'chalk';
 import { ValidationCategory } from './category.validation.js';
 
 class CategoryController {
@@ -12,7 +11,7 @@ class CategoryController {
 		const { name, parentId, description } = req.body;
 		if (!name || !parentId || !description) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Name, parentId, and description are required!'),
+				message: 'Name, parentId, and description are required!',
 			});
 		}
 		let _validationCategory = ValidationCategory.createCategory;
@@ -23,7 +22,7 @@ class CategoryController {
 		});
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 		const newCategory = await this.categoryService.createCategory({
@@ -34,10 +33,10 @@ class CategoryController {
 		if (!newCategory) {
 			return res
 				.status(StatusCodes.BAD_REQUEST)
-				.json({ message: chalk.red('Category creation failed!') });
+				.json({ message: 'Category creation failed!' });
 		}
 		return res.status(StatusCodes.CREATED).json({
-			message: chalk.green('Category created successfully'),
+			message: 'Category created successfully',
 			data: newCategory,
 		});
 	});
@@ -45,24 +44,24 @@ class CategoryController {
 		const { id } = req.params;
 		if (!id || id === 'undefined') {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Category ID is required!'),
+				message: 'Category ID is required!',
 			});
 		}
 		let _validationCategory = ValidationCategory.deleteCategory;
 		const { error } = _validationCategory.validate({ id });
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 		const deleted = await this.categoryService.deleteCategory(id);
 		if (!deleted) {
 			return res
 				.status(StatusCodes.NOT_FOUND)
-				.json({ message: chalk.red('Category not found') });
+				.json({ message: 'Category not found' });
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Category deleted successfully'),
+			message: 'Category deleted successfully',
 		});
 	});
 	updateCategory = catchAsync(async (req, res) => {
@@ -71,7 +70,7 @@ class CategoryController {
 
 		if (!id || !name || !parentId || !description) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('ID, name, parentId, and description are required!'),
+				message: 'ID, name, parentId, and description are required!',
 			});
 		}
 		let _validationCategory = ValidationCategory.updateCategory;
@@ -83,7 +82,7 @@ class CategoryController {
 		});
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 
@@ -95,10 +94,10 @@ class CategoryController {
 		if (!updateCategory) {
 			return res
 				.status(StatusCodes.BAD_REQUEST)
-				.json({ message: chalk.red('Category update field !') });
+				.json({ message: 'Category update field !' });
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Category updated successfully'),
+			message: 'Category updated successfully',
 			data: updateCategory,
 		});
 	});
@@ -106,11 +105,11 @@ class CategoryController {
 		const categories = await this.categoryService.getAllCategories();
 		if (!categories || categories.length === 0) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No categories found'),
+				message: 'No categories found',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('All categories fetched successfully'),
+			message: 'All categories fetched successfully',
 			data: categories,
 		});
 	});
@@ -119,11 +118,11 @@ class CategoryController {
 		const tree = await this.categoryService.getTreeCategories();
 		if (!tree || tree.length === 0) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No tree categories found'),
+				message: 'No tree categories found',
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Tree categories fetched successfully'),
+			message: 'Tree categories fetched successfully',
 			data: tree,
 		});
 	});
@@ -132,24 +131,24 @@ class CategoryController {
 		const { id } = req.params;
 		if (!id || id === 'undefined') {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Category ID is required!'),
+				message: 'Category ID is required!',
 			});
 		}
 		let _validationCategory = ValidationCategory.getCategoryById;
 		const { error } = _validationCategory.validate({ id });
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 		const category = await this.categoryService.getCategoryById(id);
 		if (!category) {
 			return res
 				.status(StatusCodes.NOT_FOUND)
-				.json({ message: chalk.red('Category not found') });
+				.json({ message: 'Category not found' });
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Category fetched successfully'),
+			message: 'Category fetched successfully',
 			data: category,
 		});
 	});
@@ -158,24 +157,24 @@ class CategoryController {
 		const { slug } = req.params;
 		if (!slug) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Category slug is required!'),
+				message: 'Category slug is required!',
 			});
 		}
 		let _validationCategory = ValidationCategory.getCategoryBySlug;
 		const { error } = _validationCategory.validate({ slug });
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 			});
 		}
 		const category = await this.categoryService.getCategoryBySlug(slug);
 		if (!category) {
 			return res
 				.status(StatusCodes.NOT_FOUND)
-				.json({ message: chalk.red('Category not found') });
+				.json({ message: 'Category not found' });
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Category fetched successfully'),
+			message: 'Category fetched successfully',
 			data: category,
 		});
 	});
@@ -190,7 +189,7 @@ class CategoryController {
 		});
 
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Categories fetched with pagination successfully'),
+			message: 'Categories fetched with pagination successfully',
 			...paginationData,
 		});
 	});

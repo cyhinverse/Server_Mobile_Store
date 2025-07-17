@@ -1,7 +1,6 @@
 import passport from "passport";
 import GoogleStrategy from "passport-google-oauth20";
 import User from "../models/user.model";
-import chalk from "chalk";
 GoogleStrategy.Strategy;
 
 
@@ -23,7 +22,7 @@ passport.use(new GoogleStrategy({
         await newUser.save();
         return done(null, newUser);
     } catch (error) {
-        console.log(chalk.red("Error in Google Strategy: "), error);
+        console.log("Error in Google Strategy: ", error);
         return done(error, null);
 
     }

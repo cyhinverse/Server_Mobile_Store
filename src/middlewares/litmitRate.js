@@ -1,5 +1,4 @@
 import rateLimit from 'express-rate-limit';
-import chalk from 'chalk';
 import { StatusCodes } from 'http-status-codes';
 
 export const litmitRate = rateLimit({
@@ -10,7 +9,7 @@ export const litmitRate = rateLimit({
 	legacyHeaders: false,
 	handler: (req, res) => {
 		return res.status(StatusCodes.TOO_MANY_REQUESTS).json({
-			message: chalk.red('Too many requests, please try again later.'),
+			message: 'Too many requests, please try again later.',
 			success: false,
 		});
 	},

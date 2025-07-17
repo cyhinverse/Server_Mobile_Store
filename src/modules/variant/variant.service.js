@@ -50,6 +50,37 @@ class VariantService {
 		}
 		return deletedVariant;
 	}
+	async getVariantByProductId(productId) {
+		if (!productId) {
+			throw new Error('Product id is required');
+		}
+		const variant = await this.model.findOne({ product_id: productId });
+		if (!variant) {
+			throw new Error('Variant not found');
+		}
+		return variant;
+	}
+
+	async checkAndUpdateStock(variantId, quantity) {
+		if (quantity <= 0) {
+			throw new Error('Invalid quantity');
+		}
+
+		const variant = await Variant.findById(variantId);
+		if (!variant) {
+			throw new Error('Variant not found');
+		}
+
+		if (variant.stock < quantity) {
+			throw new Error('Insufficient stock');
+		}
+
+		// Trừ stock
+		variant.stock -= quantity;
+		await variant.save();
+
+		return variant;
+	}
 }
 
 export default new VariantService();

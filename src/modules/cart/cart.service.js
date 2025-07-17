@@ -63,6 +63,16 @@ class CartService {
 		}
 		return result;
 	}
+	deleteProductFromCart = catchAsync(async (userId, productId, quantity) => {
+		if (!userId || !productId || !quantity) {
+			throw new Error('User ID, Product ID and Quantity are required');
+		}
+		const result = await this.model.findOneAndUpdate({ user_id: userId, product_id: productId }, { $inc: { quantity: -quantity } }, { new: true });
+		if (!result) {
+			throw new Error('Cart item not found');
+		}
+		return result;
+	});
 }
 
 export default new CartService();
