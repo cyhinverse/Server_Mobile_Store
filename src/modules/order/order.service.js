@@ -90,7 +90,6 @@ class OrderService {
 		}
 		return deleteOrder;
 	}
-
 	async updateStatus(orderId, status) {
 		if (!orderId) {
 			throw new Error('Order id is require!');
@@ -115,7 +114,6 @@ class OrderService {
 
 		return updateStatus;
 	}
-
 	async updateNote(userId, note) {
 		if (!userId || !note) {
 			throw new Error('UserId and note are required');
@@ -130,7 +128,6 @@ class OrderService {
 		}
 		return order;
 	}
-
 	async cancelOrder(orderId) {
 		if (!orderId) {
 			throw new Error('OrderId is required');
@@ -146,7 +143,6 @@ class OrderService {
 		await order.save();
 		return order;
 	}
-
 	async getOrderById(orderId) {
 		if (!orderId) {
 			throw new Error('OrderId is required');
@@ -173,6 +169,34 @@ class OrderService {
 			throw new Error('No orders found');
 		}
 		return orders;
+	}
+	async getOrdersByStatus(status) {
+		if (!status) {
+			throw new Error('Status is required');
+		}
+		const allowStatus = ['pending', 'completed', 'cancelled'];
+		if (!allowStatus.includes(status)) {
+			throw new Error('Invalid status');
+		}
+		const orders = await this.Order.find({ status });
+		if (!orders || orders.length === 0) {
+			throw new Error(`No orders found with status: ${status}`);
+		}
+		return orders;
+	}
+	async updatePayementMethod(orderId, paymentMethod) {
+		if (!orderId || !paymentMethod) {
+			throw new Error('OrderId and paymentMethod are required');
+		}
+		const order = await this.Order.findByIdAndUpdate(
+			orderId,
+			{ payment_method: paymentMethod },
+			{ new: true }
+		);
+		if (!order) {
+			throw new Error('Order not found or could not be updated');
+		}
+		return order;
 	}
 }
 

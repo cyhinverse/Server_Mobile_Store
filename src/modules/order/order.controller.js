@@ -151,6 +151,41 @@ class OrderController {
 			data: orders,
 		});
 	});
+	getOrdersByStatus = catchAsync(async (req, res) => {
+		const { status } = req.params;
+		const orders = await OrderService.getOrdersByStatus(status);
+		if (!orders || orders.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'No orders found with this status',
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: 'Get orders by status successfully !',
+			success: true,
+			data: orders,
+		});
+	});
+	updatePayementMethod = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { payment_method } = req.body;
+
+		const updatedOrder = await OrderService.updatePayementMethod(
+			id,
+			payment_method
+		);
+		if (!updatedOrder) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'Update payment method failed',
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: 'Update payment method successfully !',
+			success: true,
+			data: updatedOrder,
+		});
+	});
 }
 
 export default new OrderController();
