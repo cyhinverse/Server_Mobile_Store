@@ -5,6 +5,7 @@ import productRouter from '../modules/product/product.route.js';
 import wishListRouter from '../modules/wishlist/wishlist.route.js';
 import categoryRouter from '../modules/category/category.route.js';
 import variantRouter from '../modules/variant/variant.route.js';
+import promotionRouter from '../modules/Promotion/promotion.route.js';
 
 const routes = (app) => {
 	app.use('/api/v1/users', userRouter);
@@ -14,6 +15,7 @@ const routes = (app) => {
 	app.use('/api/v1/cart', cartRouter);
 	app.use('/api/v1/wishlist', wishListRouter);
 	app.use('/api/v1/categories', categoryRouter);
+	app.use('/api/v1/promotions', promotionRouter);
 };
 
 export default routes;

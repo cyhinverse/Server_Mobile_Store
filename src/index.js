@@ -6,6 +6,7 @@ import { configCors } from './configs/config.cors.js';
 import routes from './routes/index.js';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 dotenv.config();
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(
 		noSniff: true,
 	})
 );
+app.use(compression());
 
 routes(app);
 
