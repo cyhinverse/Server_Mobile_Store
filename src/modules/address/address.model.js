@@ -1,4 +1,3 @@
-// models/Address.js
 import { Schema, model, Types } from 'mongoose';
 
 const addressSchema = new Schema(

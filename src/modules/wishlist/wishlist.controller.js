@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import WishlistService from './wishlist.service.js';
-import chalk from 'chalk';
 import { WishListValidation } from './wishlist.validation.js';
 
 class WishListController {
@@ -21,7 +20,7 @@ class WishListController {
 		const { error } = _WishListValidation.validate(req.body);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 				success: false,
 			});
 		}
@@ -33,7 +32,7 @@ class WishListController {
 			});
 		}
 		return res.status(StatusCodes.CREATED).json({
-			message: chalk.green('Wishlist created successfully'),
+			message: 'Wishlist created successfully',
 			success: true,
 		});
 	});
@@ -41,9 +40,7 @@ class WishListController {
 		const { userId, productId } = req.body;
 		if (!userId || !productId) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(
-					'User ID and Product ID are required to update a wishlist'
-				),
+				message: 'User ID and Product ID are required to update a wishlist',
 				success: false,
 			});
 		}
@@ -51,7 +48,7 @@ class WishListController {
 		const { error } = _WishListValidation.validate(req.body);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 				success: false,
 			});
 		}
@@ -61,12 +58,12 @@ class WishListController {
 		);
 		if (!existingWishList) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Wishlist not found for this user'),
+				message: 'Wishlist not found for this user',
 				success: false,
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Wishlist updated successfully'),
+			message: 'Wishlist updated successfully',
 			success: true,
 		});
 	});
@@ -74,9 +71,7 @@ class WishListController {
 		const { userId, productId } = req.body;
 		if (!userId || !productId) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(
-					'User ID and Product ID are required to delete an item from wishlist'
-				),
+				message: 'User ID and Product ID are required to delete an item from wishlist',
 				success: false,
 			});
 		}
@@ -84,19 +79,19 @@ class WishListController {
 		const { error } = _WishListValidation.validate(req.body);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 				success: false,
 			});
 		}
 		const detetedItem = await WishlistService.deleteItem(userId, productId);
 		if (!detetedItem) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Wishlist not found for this user'),
+				message: 'Wishlist not found for this user',
 				success: false,
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Item deleted from wishlist successfully'),
+			message: 'Item deleted from wishlist successfully',
 			success: true,
 		});
 	});
@@ -104,7 +99,7 @@ class WishListController {
 		const { userId } = req.body;
 		if (!userId) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('User ID is required to clear wishlist'),
+				message: 'User ID is required to clear wishlist',
 				success: false,
 			});
 		}
@@ -112,19 +107,19 @@ class WishListController {
 		const { error } = _WishListValidation.validate(req.body);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 				success: false,
 			});
 		}
 		const clearedWishList = await WishlistService.clearWishList(userId);
 		if (!clearedWishList) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Wishlist not found for this user'),
+				message: 'Wishlist not found for this user',
 				success: false,
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Wishlist cleared successfully'),
+			message: 'Wishlist cleared successfully',
 			success: true,
 		});
 	});
@@ -132,7 +127,7 @@ class WishListController {
 		const { userId } = req.params;
 		if (!userId) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('User ID is required to get wishlist'),
+				message: 'User ID is required to get wishlist',
 				success: false,
 			});
 		}
@@ -140,19 +135,19 @@ class WishListController {
 		const { error } = _WishListValidation.validate(req.params);
 		if (error) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
+				message: error.details[0].message,
 				success: false,
 			});
 		}
 		const wishList = await WishlistService.getWishListById(userId);
 		if (!wishList || wishList === null) {
 			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Wishlist not found for this user'),
+				message: 'Wishlist not found for this user',
 				success: false,
 			});
 		}
 		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Wishlist retrieved successfully'),
+			message: 'Wishlist retrieved successfully',
 			success: true,
 			data: wishList,
 		});
