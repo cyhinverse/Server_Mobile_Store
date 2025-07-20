@@ -348,6 +348,150 @@ class ProductController {
 			data: isAvailable,
 		});
 	});
+	createVariantForProductId = catchAsync(async (req, res) => {
+		const { productId } = req.params;
+		const { variantData } = req.body;
+
+		if (!productId || !variantData) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID and variant data are required'),
+				success: false,
+			});
+		}
+
+		const newVariant = await ProductService.createVariantForProduct(
+			productId,
+			variantData
+		);
+
+		if (!newVariant) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: chalk.red('Failed to create variant for product'),
+				success: false,
+			});
+		}
+
+		return res.status(StatusCodes.CREATED).json({
+			message: chalk.green('Variant created successfully'),
+			success: true,
+			data: newVariant,
+		});
+	});
+	updateVariantForProduct = catchAsync(async (req, res) => {
+		const { productId } = req.params;
+		const { data } = req.body;
+		if (!productId || !data) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID and variant data are required'),
+				success: false,
+			});
+		}
+		const updatedVariant = await ProductService.updateVariantForProduct(
+			productId,
+			data
+		);
+		if (!updatedVariant) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Variant not found or update failed'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Variant updated successfully'),
+			success: true,
+			data: updatedVariant,
+		});
+	});
+	getListVariantForProduct = catchAsync(async (req, res) => {
+		const { productId } = req.params;
+		if (!productId || productId === undefined) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID is required'),
+				success: false,
+			});
+		}
+		const variants = await ProductService.getListVariantForProduct(productId);
+		if (!variants || variants.length === 0) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('No variants found for this product'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Variants retrieved successfully'),
+			success: true,
+			data: variants,
+		});
+	});
+	deleteVariantForProduct = catchAsync(async (req, res) => {
+		const { variantId } = req.params;
+		if (!variantId || variantId === undefined) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Variant ID is required'),
+				success: false,
+			});
+		}
+		const deletedVariant = await ProductService.deleteVariantForProduct(
+			variantId
+		);
+		if (!deletedVariant) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Variant not found or delete failed'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Variant deleted successfully'),
+			success: true,
+			data: deletedVariant,
+		});
+	});
+	getVariantByProductId = catchAsync(async (req, res) => {
+		const { productId } = req.params;
+		if (!productId || productId === undefined) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Product ID is required'),
+				success: false,
+			});
+		}
+		const variant = await ProductService.getVariantByProductId(productId);
+		if (!variant) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: chalk.red('Variant not found for this product'),
+				success: false,
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: chalk.green('Variant retrieved successfully'),
+			success: true,
+			data: variant,
+		});
+	});
+	checkAndUpdateStock = catchAsync(async (req, res) => {
+		const { variantId, quantity } = req.body;
+		if (!variantId || !quantity) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red('Variant ID and quantity are required'),
+				success: false,
+			});
+		}
+		try {
+			const updatedVariant = await ProductService.checkAndUpdateStock(
+				variantId,
+				quantity
+			);
+			return res.status(StatusCodes.OK).json({
+				message: chalk.green('Stock updated successfully'),
+				success: true,
+				data: updatedVariant,
+			});
+		} catch (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: chalk.red(error.message),
+				success: false,
+			});
+		}
+	});
 }
 
 export default new ProductController();

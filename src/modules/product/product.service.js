@@ -253,6 +253,134 @@ class ProductService {
 		}
 		return updatedProduct;
 	}
+	async createVariantForProduct(productId, data) {
+		if (!productId || !data) {
+			throw new Error('Product ID and variant data are required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		if (!Array.isArray(product.productDetail.variants)) {
+			product.productDetail.variants = [];
+		}
+		product.productDetail.variants.push(data);
+		const updatedProduct = await product.save();
+		if (!updatedProduct) {
+			throw new Error('Failed to create product variant');
+		}
+		return updatedProduct;
+	}
+	async updateVariantForProduct(productID, data) {
+		if (!productID || !data) {
+			throw new Error('Product ID and variant data are required');
+		}
+		const product = await this.model.findById(productID);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		if (product.variants._id === data._id) {
+			const updatedVariant = this.model.findOneAndUpdate(
+				{
+					_id: productID,
+					'variants._id': data._id,
+				},
+				{ $set: { 'variants.$': data } },
+				{ new: true }
+			);
+			if (!updatedVariant) {
+				throw new Error('Failed to update product variant');
+			}
+			return updatedVariant;
+		} else {
+			const updatedProduct = await this.model.findByIdAndUpdate(
+				productID,
+				{ $push: { variants: data } },
+				{ new: true }
+			);
+			if (!updatedProduct) {
+				throw new Error('Failed to update product variants');
+			}
+			return updatedProduct;
+		}
+	}
+	async getListVariantForProduct(productId) {
+		if (!productId) {
+			throw new Error('Product ID is required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		const variants = product.variants;
+		if (variants.length === 0) {
+			throw new Error('No variants found for this product');
+		}
+		return variants;
+	}
+	async deleteVariantForProduct(productId, variantId) {
+		if (!productId || !variantId) {
+			throw new Error('Product ID and variant ID are required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		const variantIndex = product.variants.findIndex(
+			(variant) => variant._id.toString() === variantId
+		);
+		if (variantIndex === -1) {
+			throw new Error('Variant not found for this product');
+		}
+		product.variants.splice(variantIndex, 1);
+		const updatedProduct = await product.save();
+		if (!updatedProduct) {
+			throw new Error('Failed to delete product variant');
+		}
+		return updatedProduct;
+	}
+	async getVariantByProductId(productId) {
+		if (!productId) {
+			throw new Error('Product ID is required');
+		}
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+		if (!product.variants) {
+			throw new Error('No variants found for this product');
+		}
+		return product.variants;
+	}
+	async checkAndUpdateStock(productId, variantId, quantity) {
+		if (!productId || !variantId || quantity <= 0) {
+			throw new Error(
+				'Product ID, variant ID, and valid quantity are required'
+			);
+		}
+
+		const product = await this.model.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		const variant = product.variants.find(
+			(v) => v._id.toString() === variantId
+		);
+		if (!variant) {
+			throw new Error('Variant not found for this product');
+		}
+
+		if (variant.stock < quantity) {
+			throw new Error('Insufficient stock for the requested variant');
+		}
+
+		// Trừ stock
+		variant.stock -= quantity;
+		await product.save();
+
+		return variant;
+	}
 }
 
 export default new ProductService();

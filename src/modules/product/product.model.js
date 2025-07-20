@@ -17,6 +17,29 @@ const specs = new Schema({
 	cpu: { type: String, required: true },
 });
 
+const priceSchema = new Schema(
+	{
+		originalPrice: { type: Number, required: true, min: 0 },
+		currency: { type: String, enum: ['VND'], default: 'VND' },
+	},
+	{ _id: false }
+);
+
+const variantSchema = new Schema(
+	{
+		color: String,
+		storage: String,
+		price: priceSchema,
+		stock: { type: Number, default: 0 },
+		sku: { type: String, unique: true },
+		image_url: String,
+	},
+	{
+		timestamps: true,
+		collection: 'variants',
+	}
+);
+
 const productDetail = new Schema(
 	{
 		description: { type: String, required: true, trim: true },
@@ -40,6 +63,7 @@ const productSchema = new Schema(
 			default: 'active',
 		},
 		category_id: { type: Types.ObjectId, ref: 'Category', required: true },
+		variants: [variantSchema],
 		slug: { type: String, trim: true },
 		isNewProduct: { type: Boolean, default: false },
 		isFeatured: { type: Boolean, default: false },
@@ -50,6 +74,13 @@ const productSchema = new Schema(
 		collection: 'products',
 	}
 );
+
+variantSchema.index({ product_id: 1 });
+variantSchema.index({ color: 1 });
+variantSchema.index({ storage: 1 });
+variantSchema.index({ 'price.discountCode': 1 });
+variantSchema.index({ 'price.discountEndDate': 1 });
+variantSchema.index({ product_id: 1, color: 1, storage: 1 });
 
 productSchema.index({ slug: 1 }, { unique: true });
 productSchema.index({ category_id: 1 });
