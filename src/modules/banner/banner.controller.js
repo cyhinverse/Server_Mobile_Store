@@ -1,4 +1,4 @@
-import catchAsync from '../../configs/catchAsync.js';
+import { catchAsync } from '../../configs/catchAsync.js';
 import { StatusCodes } from 'http-status-codes';
 import BannerService from './banner.service.js';
 

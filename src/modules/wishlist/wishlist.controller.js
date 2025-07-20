@@ -71,7 +71,8 @@ class WishListController {
 		const { userId, productId } = req.body;
 		if (!userId || !productId) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'User ID and Product ID are required to delete an item from wishlist',
+				message:
+					'User ID and Product ID are required to delete an item from wishlist',
 				success: false,
 			});
 		}

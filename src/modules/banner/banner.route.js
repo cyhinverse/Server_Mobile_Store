@@ -1,5 +1,5 @@
 import express from 'express';
-import BannerController from './banner.controller';
+import BannerController from './banner.controller.js';
 
 const router = express.Router();
 

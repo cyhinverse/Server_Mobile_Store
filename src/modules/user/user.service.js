@@ -1,68 +1,166 @@
+import { Types } from 'mongoose';
 import User from './user.model.js';
 import bcrypt from 'bcrypt';
 
 class UserService {
 	static async checkUserExists(phoneNumber) {
-		if (!phoneNumber) {
-			throw new Error('Email is required to check user existence');
-		}
-		const userExists = await User.findOne({
-			phoneNumber: phoneNumber,
-		});
-		return userExists;
+		if (!phoneNumber) throw new Error('Phone number is required');
+		return await User.findOne({ phoneNumber }).lean();
 	}
+
 	static async createUser(userData) {
-		if (!userData || !userData.email) {
-			throw new Error('User data and email are required to create a user');
+		if (!userData?.email || !userData?.phoneNumber) {
+			throw new Error('Email and phone number are required');
 		}
-		const user = new User(userData);
-		return await user.save();
+		return await User.create(userData);
 	}
+
 	static async hashPassword(password) {
-		if (!password) {
-			throw new Error('Password is required to hash');
-		}
-		const saltRounds = 10;
-		return await bcrypt.hash(password, saltRounds);
+		if (!password) throw new Error('Password is required');
+		return await bcrypt.hash(password, 10);
 	}
+
 	static async comparePassword(password, hashedPassword) {
-		if (!password || !hashedPassword) {
-			throw new Error('Password and hashed password are required to compare');
-		}
+		if (!password || !hashedPassword)
+			throw new Error('Both passwords are required');
 		return await bcrypt.compare(password, hashedPassword);
 	}
+
 	static async getUserById(userId) {
-		if (!userId) {
-			throw new Error('User ID is required to get user');
-		}
-		return await User.findById(userId);
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		return await User.findById(userId).lean();
 	}
-	static async deleteUser(userId) {
-		if (!userId) {
-			throw new Error('User ID is required to delete user');
-		}
-		return await User.findByIdAndDelete(userId);
-	}
+
 	static async updateUser(userId, updateData) {
-		if (!userId || !updateData) {
-			throw new Error('User ID and update data are required to update user');
-		}
-		return await User.findByIdAndUpdate(userId, updateData, { new: true });
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		return await User.findByIdAndUpdate(userId, updateData, {
+			new: true,
+			runValidators: true,
+		}).lean();
 	}
-	static async getAllUser() {
-		return await User.find();
-	}
-	static async generateResetToken(userId) {
-		if (!userId) {
-			throw new Error('User ID is required to generate reset token');
+
+	static async addAddress(userId, addressData) {
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+
+		const requiredFields = [
+			'fullName',
+			'phoneNumber',
+			'province',
+			'district',
+			'ward',
+			'street',
+		];
+		const missingFields = requiredFields.filter((field) => !addressData[field]);
+
+		if (missingFields.length > 0) {
+			throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
 		}
+
 		const user = await User.findById(userId);
-		if (!user) {
-			throw new Error('User not found');
+		if (!user) throw new Error('User not found');
+
+		if (addressData.isDefault) {
+			user.addresses.forEach((addr) => {
+				addr.isDefault = false;
+			});
 		}
-		const resetToken = await bcrypt.hash(user.email + Date.now(), 10);
-		user.resetToken = resetToken;
+
+		const newAddress = {
+			...addressData,
+			_id: new Types.ObjectId(),
+			isDefault: addressData.isDefault || user.addresses.length === 0,
+			createdAt: new Date(),
+		};
+
+		user.addresses.push(newAddress);
 		await user.save();
+		return newAddress;
+	}
+
+	static async getAddresses(userId) {
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		const user = await User.findById(userId).select('addresses').lean();
+		if (!user) throw new Error('User not found');
+
+		return user.addresses.sort(
+			(a, b) => b.isDefault - a.isDefault || b.createdAt - a.createdAt
+		);
+	}
+
+	static async getAddressById(userId, addressId) {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const user = await User.findOne(
+			{ _id: userId, 'addresses._id': addressId },
+			{ 'addresses.$': 1 }
+		).lean();
+
+		if (!user?.addresses?.length) throw new Error('Address not found');
+		return user.addresses[0];
+	}
+
+	static async updateAddress(userId, addressId, updateData) {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const user = await User.findById(userId);
+		if (!user) throw new Error('User not found');
+
+		const address = user.addresses.id(addressId);
+		if (!address) throw new Error('Address not found');
+
+		if (updateData.isDefault) {
+			user.addresses.forEach((addr) => {
+				addr.isDefault = addr._id.equals(addressId);
+			});
+		}
+
+		Object.assign(address, updateData);
+		await user.save();
+		return address;
+	}
+
+	static async deleteAddress(userId, addressId) {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const user = await User.findById(userId);
+		if (!user) throw new Error('User not found');
+
+		const address = user.addresses.id(addressId);
+		if (!address) throw new Error('Address not found');
+
+		if (address.isDefault && user.addresses.length > 1) {
+			const newDefault = user.addresses.find((a) => !a._id.equals(addressId));
+			if (newDefault) newDefault.isDefault = true;
+		}
+
+		user.addresses.pull(addressId);
+		await user.save();
+		return address;
+	}
+
+	static async setDefaultAddress(userId, addressId) {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const user = await User.findById(userId);
+		if (!user) throw new Error('User not found');
+
+		const address = user.addresses.id(addressId);
+		if (!address) throw new Error('Address not found');
+
+		user.addresses.forEach((addr) => {
+			addr.isDefault = addr._id.equals(addressId);
+		});
+
+		await user.save();
+		return address;
 	}
 }
 

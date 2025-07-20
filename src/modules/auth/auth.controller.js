@@ -1,4 +1,3 @@
-
 import { catchAsync } from '../../configs/catchAsync.js';
 import AuthValidation from './auth.validation.js';
 import { StatusCodes } from 'http-status-codes';
@@ -11,16 +10,8 @@ import { transporter } from '../../configs/config.nodemailer.js';
 
 class AuthController {
 	register = catchAsync(async (req, res) => {
-		const { fullName, dayOfBirth, phoneNumber, email, password, address } =
-			req.body;
-		if (
-			!fullName ||
-			!dayOfBirth ||
-			!phoneNumber ||
-			!email ||
-			!password ||
-			!address
-		) {
+		const { fullName, dayOfBirth, phoneNumber, email, password } = req.body;
+		if (!fullName || !dayOfBirth || !phoneNumber || !email || !password) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
 				message: 'All fields are required',
 			});
@@ -32,7 +23,6 @@ class AuthController {
 			phoneNumber,
 			email,
 			password,
-			address,
 		});
 		if (error) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -57,7 +47,6 @@ class AuthController {
 			phoneNumber,
 			email,
 			password: hashedPassword,
-			address,
 		};
 
 		const newUser = await UserService.createUser(userData);
@@ -224,8 +213,9 @@ class AuthController {
                 <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 32px 24px; background: #fafbfc;">
                     <h2 style="color: #2d3748;">Password Reset Request</h2>
                     <p style="color: #4a5568; font-size: 16px;">You requested a password reset. Please click the button below to reset your password:</p>
-                    <a href="${process.env.CLIENT_URL
-				}/reset-password?token=${resetToken}" style="display: inline-block; margin: 24px 0; padding: 12px 28px; background: #3182ce; color: #fff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: bold;">Reset Password</a>
+                    <a href="${
+											process.env.CLIENT_URL
+										}/reset-password?token=${resetToken}" style="display: inline-block; margin: 24px 0; padding: 12px 28px; background: #3182ce; color: #fff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: bold;">Reset Password</a>
                     <p style="color: #a0aec0; font-size: 14px;">If you did not request this, please ignore this email.</p>
                     <hr style="margin: 32px 0; border: none; border-top: 1px solid #e2e8f0;">
                     <p style="color: #a0aec0; font-size: 12px;">&copy; ${new Date().getFullYear()} Mobile Store. All rights reserved.</p>
@@ -294,6 +284,264 @@ class AuthController {
 		res.clearCookie('accessToken');
 		return res.status(StatusCodes.OK).json({
 			message: 'Logout successful',
+		});
+	});
+	verifyEmail = catchAsync(async (req, res) => {
+		const { token } = req.query;
+		if (!token) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'Token is required',
+			});
+		}
+		const decoded = await authService.verifyEmailToken(token);
+		if (!decoded) {
+			return res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Invalid or expired token',
+			});
+		}
+		const user = await UserService.getUserById(decoded.id);
+		if (!user || user === null) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+		if (user.verifyEmail) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'Email already verified',
+			});
+		}
+		user.verifyEmail = true;
+		const updatedUser = await user.save();
+		if (!updatedUser) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'Failed to verify email',
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			message: 'Email verified successfully',
+		});
+	});
+	changePassword = catchAsync(async (req, res) => {
+		const { oldPassword, newPassword } = req.body;
+		const userId = req.user?.id;
+
+		if (!oldPassword || !newPassword) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'Old password and new password are required',
+			});
+		}
+
+		if (!userId) {
+			return res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'User not authenticated',
+			});
+		}
+
+		const { error } = AuthValidation.changePasswordValidation.validate({
+			oldPassword,
+			newPassword,
+		});
+
+		if (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: error.details[0].message,
+			});
+		}
+
+		const user = await UserService.getUserById(userId);
+		if (!user) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		const isPasswordValid = await UserService.comparePassword(
+			oldPassword,
+			user.password
+		);
+		if (!isPasswordValid) {
+			return res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Invalid old password',
+			});
+		}
+
+		const hashedPassword = await UserService.hashPassword(newPassword);
+		if (!hashedPassword) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'Failed to hash new password',
+			});
+		}
+
+		user.password = hashedPassword;
+		const updatedUser = await user.save();
+		if (!updatedUser) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'Failed to update password',
+			});
+		}
+
+		return res.status(StatusCodes.OK).json({
+			message: 'Password changed successfully',
+		});
+	});
+	getAllRoles = catchAsync(async (req, res) => {
+		const rolesEnum = User.schema.path('roles').caster.enumValues;
+
+		res.status(StatusCodes.OK).json({
+			message: 'Get all roles successfully',
+			data: rolesEnum || ['user', 'admin'],
+		});
+	});
+	assignRoleToUser = catchAsync(async (req, res) => {
+		const { userId, role } = req.body;
+
+		// Validate input
+		if (!userId || !role) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'User ID and role are required',
+			});
+		}
+
+		// Kiểm tra role hợp lệ
+		const validRoles = ['user', 'admin'];
+		if (!validRoles.includes(role)) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: `Invalid role. Valid roles are: ${validRoles.join(', ')}`,
+			});
+		}
+
+		// Cập nhật role cho user
+		const updatedUser = await UserService.updateUser(userId, {
+			$addToSet: { roles: role },
+		});
+
+		if (!updatedUser) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		res.status(StatusCodes.OK).json({
+			message: 'Role assigned successfully',
+			user: {
+				id: updatedUser._id,
+				roles: updatedUser.roles,
+			},
+		});
+	});
+	revokeRoleFromUser = catchAsync(async (req, res) => {
+		const { userId, role } = req.body;
+		if (!userId || !role) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'User ID and role are required',
+			});
+		}
+		const updatedUser = await UserService.updateUser(userId, {
+			$pull: { roles: role },
+		});
+
+		if (!updatedUser) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		res.status(StatusCodes.OK).json({
+			message: 'Role revoked successfully',
+			user: {
+				id: updatedUser._id,
+				roles: updatedUser.roles,
+			},
+		});
+	});
+	getUsersByRole = catchAsync(async (req, res) => {
+		const { role } = req.params;
+
+		// Kiểm tra role hợp lệ
+		const validRoles = ['user', 'admin'];
+		if (!validRoles.includes(role)) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: `Invalid role. Valid roles are: ${validRoles.join(', ')}`,
+			});
+		}
+
+		const users = await UserService.getUsersByRole(role);
+
+		res.status(StatusCodes.OK).json({
+			message: `Get users with role ${role} successfully`,
+			data: users,
+		});
+	});
+	assignPermissions = catchAsync(async (req, res) => {
+		const { error } = PermissionValidation.assignPermissions.validate(req.body);
+		if (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: error.details[0].message,
+			});
+		}
+
+		const { userId, permissions } = req.body;
+
+		const updatedUser = await UserService.assignPermissions(
+			userId,
+			permissions
+		);
+
+		if (!updatedUser) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		res.status(StatusCodes.OK).json({
+			message: 'Permissions assigned successfully',
+			user: {
+				id: updatedUser._id,
+				permissions: updatedUser.permissions,
+			},
+		});
+	});
+	revokePermissions = catchAsync(async (req, res) => {
+		const { userId, permissions } = req.body;
+
+		if (!userId || !permissions) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'User ID and permissions are required',
+			});
+		}
+
+		const updatedUser = await UserService.revokePermissions(
+			userId,
+			permissions
+		);
+
+		if (!updatedUser) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		res.status(StatusCodes.OK).json({
+			message: 'Permissions revoked successfully',
+			user: {
+				id: updatedUser._id,
+				permissions: updatedUser.permissions,
+			},
+		});
+	});
+	getUserPermissions = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		const user = await UserService.getUserById(userId);
+		if (!user) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				message: 'User not found',
+			});
+		}
+
+		res.status(StatusCodes.OK).json({
+			message: 'Get user permissions successfully',
+			permissions: user.permissions,
 		});
 	});
 }

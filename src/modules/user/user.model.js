@@ -1,6 +1,16 @@
-// models/User.js
-
 import { Schema, model, Types } from 'mongoose';
+
+const addressSchema = new Schema({
+	user: { type: Types.ObjectId, ref: 'User', required: true },
+	fullName: { type: String, required: true },
+	phoneNumber: { type: String, required: true },
+	province: { type: String, required: true },
+	district: { type: String, required: true },
+	ward: { type: String, required: true },
+	street: { type: String, required: true },
+	isDefault: { type: Boolean, default: false },
+	note: { type: String },
+});
 
 const userSchema = new Schema(
 	{
@@ -16,13 +26,11 @@ const userSchema = new Schema(
 			default: ['user'],
 			enum: ['user', 'admin'],
 		},
-
-		address_ids: [
-			{
-				type: Types.ObjectId,
-				ref: 'Address',
-			},
-		],
+		permissions: {
+			type: [String],
+			default: [],
+		},
+		addresses: [addressSchema],
 
 		order_id: {
 			type: Types.ObjectId,
@@ -36,6 +44,7 @@ const userSchema = new Schema(
 			type: String,
 			enum: ['google', 'facebook'],
 		},
+		verifyEmail: { type: Boolean, default: false },
 		provider_id: { type: String },
 		qr_code: { type: String },
 		qrExpiresAt: { type: Date },

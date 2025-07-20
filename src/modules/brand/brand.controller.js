@@ -7,7 +7,6 @@ class BrandController {
 	constructor() {
 		this.brandService = brandService;
 	}
-
 	createBrand = catchAsync(async (req, res) => {
 		const { name, logo, description, isActive } = req.body;
 
@@ -31,25 +30,23 @@ class BrandController {
 			});
 		}
 
-		try {
-			const newBrand = await this.brandService.createBrand({
-				name,
-				logo,
-				description,
-				isActive,
-			});
-
-			return res.status(StatusCodes.CREATED).json({
-				message: 'Brand created successfully',
-				data: newBrand,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.message,
+		const newBrand = await this.brandService.createBrand({
+			name,
+			logo,
+			description,
+			isActive,
+		});
+		if (!newBrand) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				message: 'Failed to create brand',
 			});
 		}
-	});
 
+		return res.status(StatusCodes.CREATED).json({
+			message: 'Brand created successfully',
+			data: newBrand,
+		});
+	});
 	deleteBrand = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
@@ -80,7 +77,6 @@ class BrandController {
 			});
 		}
 	});
-
 	updateBrand = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		const { name, logo, description, isActive } = req.body;
@@ -125,7 +121,6 @@ class BrandController {
 			});
 		}
 	});
-
 	getAllBrands = catchAsync(async (req, res) => {
 		try {
 			const brands = await this.brandService.getAllBrands();
@@ -139,7 +134,6 @@ class BrandController {
 			});
 		}
 	});
-
 	getActiveBrands = catchAsync(async (req, res) => {
 		try {
 			const brands = await this.brandService.getActiveBrands();
@@ -153,7 +147,6 @@ class BrandController {
 			});
 		}
 	});
-
 	getBrandById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
@@ -184,7 +177,6 @@ class BrandController {
 			});
 		}
 	});
-
 	getBrandsPaginated = catchAsync(async (req, res) => {
 		const { page = 1, limit = 10, search = '', isActive } = req.query;
 
@@ -220,7 +212,6 @@ class BrandController {
 			});
 		}
 	});
-
 	toggleBrandStatus = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
@@ -242,7 +233,6 @@ class BrandController {
 			});
 		}
 	});
-
 	getBrandByName = catchAsync(async (req, res) => {
 		const { name } = req.params;
 
