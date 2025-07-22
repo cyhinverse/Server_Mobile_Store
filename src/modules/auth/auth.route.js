@@ -9,6 +9,10 @@ const router = express.Router();
 
 router.post('/register', litmitRate, AuthController.register);
 router.post('/login', litmitRate, AuthController.login);
+router.post('/forgot-password', AuthController.forgotPassword);
+router.post('/reset-password', AuthController.resetPassword);
+router.post('/send-verify-code', AuthController.sendCodeToVerifyEmail);
+router.post('/verify-email', AuthController.verifyEmail);
 router.get(
 	'/auth/google',
 	passport.authenticate('google', { scope: ['profile', 'email'] })
@@ -19,18 +23,12 @@ router.get(
 	AuthController.loginWithGoogle
 );
 router.get('/logout', AuthController.logout);
-router.get('/roles', checkPermission('roles.read'), AuthController.getAllRoles);
+router.get('/roles', AuthController.getAllRoles);
 
 router.post(
 	'/roles/:id/permissions',
-	checkPermission('roles.update'),
-	AuthController.assignPermissions
-);
-
-router.post(
-	'/permissions/assign',
 	authMiddleware,
-	checkPermission('permissions.assign'),
+	checkPermission('roles.update'),
 	AuthController.assignPermissions
 );
 
@@ -46,5 +44,19 @@ router.get(
 	authMiddleware,
 	checkPermission('permissions.view'),
 	AuthController.getUserPermissions
+);
+
+router.get(
+	'/users/roles',
+	authMiddleware,
+	checkPermission('permissions.view'),
+	AuthController.getUsersByRole
+);
+
+router.post(
+	'/roles/:userId/assign',
+	authMiddleware,
+	checkPermission('roles.view'),
+	AuthController.assignRoleToUser
 );
 export default router;

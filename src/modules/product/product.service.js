@@ -275,12 +275,30 @@ class ProductService {
 		if (!productID || !data) {
 			throw new Error('Product ID and variant data are required');
 		}
+
 		const product = await this.model.findById(productID);
 		if (!product) {
 			throw new Error('Product not found');
 		}
-		if (product.variants._id === data._id) {
-			const updatedVariant = this.model.findOneAndUpdate(
+
+		const existingVariantIndex = product.variants.findIndex((v) =>
+			v._id.equals(data._id)
+		);
+
+		if (existingVariantIndex !== -1) {
+			// Update existing variant
+			if (data.stock > product.stock) {
+				throw new Error('Variant stock cannot be greater than product stock');
+			}
+			const newTotalStock = product.variants.reduce((total, v, idx) => {
+				return total + (idx === existingVariantIndex ? data.stock : v.stock);
+			}, 0);
+
+			if (newTotalStock > product.stock) {
+				throw new Error('Total variants stock cannot exceed product stock');
+			}
+
+			const updatedProduct = await this.model.findOneAndUpdate(
 				{
 					_id: productID,
 					'variants._id': data._id,
@@ -288,18 +306,35 @@ class ProductService {
 				{ $set: { 'variants.$': data } },
 				{ new: true }
 			);
-			if (!updatedVariant) {
+
+			if (!updatedProduct) {
 				throw new Error('Failed to update product variant');
 			}
-			return updatedVariant;
+			return updatedProduct;
 		} else {
+			// Add new variant
+			if (data.stock > product.stock) {
+				throw new Error(
+					'New variant stock cannot be greater than product stock'
+				);
+			}
+
+			const currentTotalStock = product.variants.reduce(
+				(total, v) => total + v.stock,
+				0
+			);
+			if (currentTotalStock + data.stock > product.stock) {
+				throw new Error('Adding this variant would exceed product stock');
+			}
+
 			const updatedProduct = await this.model.findByIdAndUpdate(
 				productID,
 				{ $push: { variants: data } },
 				{ new: true }
 			);
+
 			if (!updatedProduct) {
-				throw new Error('Failed to update product variants');
+				throw new Error('Failed to add new variant');
 			}
 			return updatedProduct;
 		}

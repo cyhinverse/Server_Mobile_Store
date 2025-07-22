@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../user/user.model.js';
+import dotenv from 'dotenv';
+dotenv.config();
 class AuthService {
 	static async generateRefreshToken(payload) {
 		return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
@@ -33,15 +35,18 @@ class AuthService {
 			throw new Error('Invalid or expired refresh token');
 		}
 	}
-	static async verifyEmailToken(token) {
-		if (!token) {
-			throw new Error('Email verification token is required');
+	static async verifyEmailCode(code) {
+		if (!code) {
+			throw new Error('Email verification code is required');
 		}
-		try {
-			return jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
-		} catch (error) {
-			throw new Error('Invalid or expired email verification token');
+		const user = await User.findOne({ codeVerify: code });
+		if (!user) {
+			throw new Error('Invalid or expired email verification code');
 		}
+		if (user.codeVerifyExpires < Date.now()) {
+			throw new Error('Email verification code has expired');
+		}
+		return user;
 	}
 	static async updateUser(userId, updateData) {
 		return await User.findByIdAndUpdate(userId, updateData, { new: true });
@@ -50,10 +55,10 @@ class AuthService {
 	static async getUsersByRole(role) {
 		return await User.find({ roles: role }).select('-password -__v');
 	}
-	static async assignPermissions(userId, permissions) {
+	static async assignPermissions(id, permissions) {
 		return await User.findByIdAndUpdate(
-			userId,
-			{ $addToSet: { permissions: { $each: permissions } } },
+			id,
+			{ $addToSet: { permissions: permissions } },
 			{ new: true }
 		);
 	}
@@ -61,13 +66,20 @@ class AuthService {
 	static async revokePermissions(userId, permissions) {
 		return await User.findByIdAndUpdate(
 			userId,
-			{ $pull: { permissions: { $in: permissions } } },
+			{ $pull: { permissions: permissions } },
 			{ new: true }
 		);
 	}
 
 	static async getUserWithPermissions(userId) {
 		return await User.findById(userId).select('permissions roles');
+	}
+	static async updateRoleForUser(userId, role) {
+		return await User.findByIdAndUpdate(
+			userId,
+			{ $set: { roles: role } },
+			{ new: true }
+		);
 	}
 }
 

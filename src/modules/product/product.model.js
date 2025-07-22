@@ -62,6 +62,7 @@ const productSchema = new Schema(
 			enum: ['active', 'out_of_stock', 'disabled'],
 			default: 'active',
 		},
+		brand_id: { type: Types.ObjectId, ref: 'Brand', required: true },
 		category_id: { type: Types.ObjectId, ref: 'Category', required: true },
 		variants: [variantSchema],
 		slug: { type: String, trim: true },
@@ -74,14 +75,14 @@ const productSchema = new Schema(
 		collection: 'products',
 	}
 );
-
+/* index variant */
 variantSchema.index({ product_id: 1 });
 variantSchema.index({ color: 1 });
 variantSchema.index({ storage: 1 });
 variantSchema.index({ 'price.discountCode': 1 });
 variantSchema.index({ 'price.discountEndDate': 1 });
 variantSchema.index({ product_id: 1, color: 1, storage: 1 });
-
+/* index product */
 productSchema.index({ slug: 1 }, { unique: true });
 productSchema.index({ category_id: 1 });
 productSchema.index({ name: 'text', 'productDetail.description': 'text' });

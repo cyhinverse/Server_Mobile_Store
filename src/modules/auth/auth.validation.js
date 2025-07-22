@@ -9,7 +9,7 @@ const AuthValidation = {
 		password: Joi.string().min(6).required(),
 	}),
 	loginValidation: Joi.object({
-		phoneNumber: Joi.string().required(),
+		email: Joi.string().required(),
 		password: Joi.string().min(6).required(),
 	}),
 	forgotPasswordValidation: Joi.object({
@@ -17,8 +17,8 @@ const AuthValidation = {
 	}),
 	resetPasswordValidation: Joi.object({
 		token: Joi.string().required(),
-		password: Joi.string().min(6).required(),
-		confirmPassword: Joi.string().valid(Joi.ref('password')).required(),
+		newPassword: Joi.string().min(6).required(),
+		confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required(),
 	}),
 	changePasswordValidation: Joi.object({
 		oldPassword: Joi.string().min(6).required(),
@@ -28,6 +28,9 @@ const AuthValidation = {
 	assignPermissions: Joi.object({
 		userId: Joi.string().required(),
 		permissions: Joi.array().items(Joi.string()).required(),
+	}),
+	sendCodeToVerifyEmailValidation: Joi.object({
+		email: Joi.string().email().required(),
 	}),
 };
 

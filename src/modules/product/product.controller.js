@@ -43,7 +43,6 @@ class ProductController {
 			data: newProduct,
 		});
 	});
-
 	deleteProduct = catchAsync(async (req, res) => {
 		const { id } = req.query;
 		console.log(`checking id: ${id}`);

@@ -6,12 +6,12 @@ export const checkPermission = (requiredPermission) => {
 		const user = req.user;
 
 		// Admin có tất cả quyền
-		if (user.roles.includes('admin')) {
+		if (user.role === 'admin' || user.roles === 'admin') {
 			return next();
 		}
 
 		// Kiểm tra permission
-		if (!user.permissions.includes(requiredPermission)) {
+		if (!user.permissions || !user.permissions.includes(requiredPermission)) {
 			return res.status(StatusCodes.FORBIDDEN).json({
 				message: `Access denied - Required permission: ${requiredPermission}`,
 			});

@@ -22,15 +22,15 @@ const userSchema = new Schema(
 		isStudent: { type: Boolean, default: false },
 		isTeacher: { type: Boolean, default: false },
 		roles: {
-			type: [String],
-			default: ['user'],
+			type: String,
+			default: 'user',
 			enum: ['user', 'admin'],
 		},
 		permissions: {
 			type: [String],
 			default: [],
 		},
-		addresses: [addressSchema],
+		address: [addressSchema],
 
 		order_id: {
 			type: Types.ObjectId,
@@ -44,6 +44,8 @@ const userSchema = new Schema(
 			type: String,
 			enum: ['google', 'facebook'],
 		},
+		codeVerify: { type: String, default: '' },
+		codeExpiresAt: { type: Date, default: null },
 		verifyEmail: { type: Boolean, default: false },
 		provider_id: { type: String },
 		qr_code: { type: String },

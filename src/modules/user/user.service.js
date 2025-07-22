@@ -3,9 +3,18 @@ import User from './user.model.js';
 import bcrypt from 'bcrypt';
 
 class UserService {
-	static async checkUserExists(phoneNumber) {
-		if (!phoneNumber) throw new Error('Phone number is required');
-		return await User.findOne({ phoneNumber }).lean();
+	static async checkUserExists(email) {
+		if (!email) throw new Error('Email is required');
+		return await User.findOne({ email }).lean();
+	}
+	static async updatePasswordForUser(userId, newPassword) {
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		const hashedPassword = await UserService.hashPassword(newPassword);
+		return await User.findByIdAndUpdate(
+			userId,
+			{ password: hashedPassword },
+			{ new: true }
+		);
 	}
 
 	static async createUser(userData) {
@@ -28,7 +37,7 @@ class UserService {
 
 	static async getUserById(userId) {
 		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		return await User.findById(userId).lean();
+		return await User.findById(userId);
 	}
 
 	static async updateUser(userId, updateData) {
@@ -139,7 +148,7 @@ class UserService {
 			if (newDefault) newDefault.isDefault = true;
 		}
 
-		user.addresses.pull(addressId);
+		user.address.pull(addressId);
 		await user.save();
 		return address;
 	}
@@ -152,7 +161,7 @@ class UserService {
 		const user = await User.findById(userId);
 		if (!user) throw new Error('User not found');
 
-		const address = user.addresses.id(addressId);
+		const address = user.address.id(addressId);
 		if (!address) throw new Error('Address not found');
 
 		user.addresses.forEach((addr) => {
@@ -161,6 +170,12 @@ class UserService {
 
 		await user.save();
 		return address;
+	}
+	static async getUserByEmail(email) {
+		if (!email) throw new Error('Email is required');
+		return await User.findOne({
+			email,
+		});
 	}
 }
 

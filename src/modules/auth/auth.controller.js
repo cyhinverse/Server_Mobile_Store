@@ -7,6 +7,11 @@ GoogleStrategy.Strategy;
 import jwt from 'jsonwebtoken';
 import authService from './auth.service.js';
 import { transporter } from '../../configs/config.nodemailer.js';
+import User from '../user/user.model.js';
+import { generateRandomCode } from '../../utils/generateRandomCode.js';
+import dotenv from 'dotenv';
+import AuthService from './auth.service.js';
+dotenv.config();
 
 class AuthController {
 	register = catchAsync(async (req, res) => {
@@ -69,17 +74,17 @@ class AuthController {
 		});
 	});
 	login = catchAsync(async (req, res) => {
-		const { phoneNumber, password } = req.body;
-		console.log(phoneNumber, password);
+		const { email, password } = req.body;
+		console.log(email, password);
 
-		if (!phoneNumber || !password) {
+		if (!email || !password) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Phone number and password are required',
+				message: 'Email and password are required',
 			});
 		}
 
 		const { error } = AuthValidation.loginValidation.validate({
-			phoneNumber,
+			email,
 			password,
 		});
 		if (error) {
@@ -88,7 +93,7 @@ class AuthController {
 			});
 		}
 
-		const user = await UserService.checkUserExists(phoneNumber);
+		const user = await UserService.checkUserExists(email);
 		if (!user) {
 			return res.status(StatusCodes.NOT_FOUND).json({
 				message: 'User not found',
@@ -108,7 +113,8 @@ class AuthController {
 			id: user._id,
 			email: user.email,
 			name: user.fullName,
-			role: user.roles,
+			roles: user.roles,
+			permissions: user.permissions,
 		};
 
 		const accessToken = await authService.generateAccessToken(payload);
@@ -137,7 +143,6 @@ class AuthController {
 				fullName: user.fullName,
 				email: user.email,
 				phoneNumber: user.phoneNumber,
-				address: user.address,
 			},
 			accessToken,
 			refreshToken,
@@ -201,7 +206,7 @@ class AuthController {
 			});
 		}
 
-		const info = transporter.sendMail({
+		const info = await transporter.sendMail({
 			from: process.env.SMTP_USER,
 			to: email,
 			subject: 'Password Reset Request',
@@ -210,18 +215,28 @@ class AuthController {
 				`${process.env.CLIENT_URL}/reset-password?token=${resetToken}\n\n` +
 				`If you did not request this, please ignore this email.\n`,
 			html: `
-                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 1px solid #eee; border-radius: 8px; padding: 32px 24px; background: #fafbfc;">
-                    <h2 style="color: #2d3748;">Password Reset Request</h2>
-                    <p style="color: #4a5568; font-size: 16px;">You requested a password reset. Please click the button below to reset your password:</p>
-                    <a href="${
-											process.env.CLIENT_URL
-										}/reset-password?token=${resetToken}" style="display: inline-block; margin: 24px 0; padding: 12px 28px; background: #3182ce; color: #fff; text-decoration: none; border-radius: 4px; font-size: 16px; font-weight: bold;">Reset Password</a>
-                    <p style="color: #a0aec0; font-size: 14px;">If you did not request this, please ignore this email.</p>
-                    <hr style="margin: 32px 0; border: none; border-top: 1px solid #e2e8f0;">
-                    <p style="color: #a0aec0; font-size: 12px;">&copy; ${new Date().getFullYear()} Mobile Store. All rights reserved.</p>
-                </div>
-            `,
+				<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e1e4e8; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+					<div style="background: #3182ce; padding: 24px; text-align: center;">
+						<h1 style="color: white; margin: 0; font-size: 24px;">Mobile Store</h1>
+					</div>
+					<div style="background: white; padding: 32px 24px;">
+						<h2 style="color: #333; margin-top: 0; font-size: 20px;">Password Reset Request</h2>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">Hello,</p>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">We received a request to reset your password. To proceed with resetting your password, please click the button below:</p>
+						<div style="text-align: center; margin: 32px 0;">
+							<a href="${process.env.CLIENT_URL}/reset-password?token=${resetToken}" 
+								 style="display: inline-block; padding: 12px 28px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s;">Reset Password</a>
+						</div>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">If you didn't request a password reset, you can safely ignore this email. Your account security is important to us.</p>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">This link will expire in 1 hour.</p>
+					</div>
+					<div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e1e4e8;">
+						<p style="color: #777; font-size: 14px; margin: 0;">&copy; ${new Date().getFullYear()} Mobile Store. All rights reserved.</p>
+					</div>
+				</div>
+			`,
 		});
+		console.log(`check info`, info);
 		if (!info || info.rejected.length > 0) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				message: 'Failed to send reset email',
@@ -232,17 +247,18 @@ class AuthController {
 		});
 	});
 	resetPassword = catchAsync(async (req, res) => {
-		const { token, newPassword } = req.body;
+		const { token, newPassword, confirmPassword } = req.body;
 
-		if (!token || !newPassword) {
+		if (!token || !newPassword || !confirmPassword) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Token and new password are required',
+				message: 'Token, new password, and confirm password are required',
 			});
 		}
 
 		const { error } = AuthValidation.resetPasswordValidation.validate({
 			token,
 			newPassword,
+			confirmPassword,
 		});
 
 		if (error) {
@@ -268,8 +284,10 @@ class AuthController {
 				message: 'Failed to hash new password',
 			});
 		}
-		user.password = hashedPassword;
-		const updatedUser = await user.save();
+		const updatedUser = await UserService.updatePasswordForUser(
+			user._id,
+			hashedPassword
+		);
 		if (!updatedUser) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
 				message: 'Failed to update password',
@@ -286,20 +304,102 @@ class AuthController {
 			message: 'Logout successful',
 		});
 	});
-	verifyEmail = catchAsync(async (req, res) => {
-		const { token } = req.query;
-		if (!token) {
+	sendCodeToVerifyEmail = catchAsync(async (req, res) => {
+		const { email } = req.body;
+
+		if (!email) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Token is required',
+				success: false,
+				message: 'Email is required',
 			});
 		}
-		const decoded = await authService.verifyEmailToken(token);
-		if (!decoded) {
+
+		// Validate email format
+		const { error } = AuthValidation.sendCodeToVerifyEmailValidation.validate({
+			email,
+		});
+		if (error) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				message: error.details[0].message,
+			});
+		}
+
+		// Check if user exists
+		const user = await UserService.getUserByEmail(email);
+
+		if (!user) {
+			return res.status(StatusCodes.NOT_FOUND).json({
+				success: false,
+				message: 'User not found',
+			});
+		}
+
+		// Check if email is already verified
+		if (user.verifyEmail) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				success: false,
+				message: 'Email is already verified',
+			});
+		}
+
+		const code = generateRandomCode(6);
+		user.codeVerify = code;
+		user.codeExpiresAt = new Date(
+			Date.now() + (parseInt(process.env.CODE_EXPIRATION_TIME) || 3600000)
+		);
+
+		await user.save();
+		const infoEmail = await transporter.sendMail({
+			from: process.env.SMTP_USER,
+			to: email,
+			subject: 'Verify Your Email',
+			text: `Your verification code is: ${code}. This code will expire in 1 hour.`,
+			html: `
+				<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e1e4e8; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+					<div style="background: #3182ce; padding: 24px; text-align: center;">
+						<h1 style="color: white; margin: 0; font-size: 24px;">Mobile Store</h1>
+					</div>
+					<div style="background: white; padding: 32px 24px;">
+						<h2 style="color: #333; margin-top: 0; font-size: 20px;">Email Verification Code</h2>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">Hello,</p>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">Your verification code is <strong>${code}</strong>. This code will expire in one hour.</p>
+						<p style="color: #555; font-size: 16px; line-height: 1.5;">If you did not request this, please ignore this email.</p>
+					</div>
+					<div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e1e4e8;">
+						<p style="color: #777; font-size: 14px; margin: 0;">&copy; ${new Date().getFullYear()} Mobile Store. All rights reserved.</p>
+					</div>
+				</div>
+			`,
+		});
+		console.log(`check info`, infoEmail);
+		if (!infoEmail || infoEmail.rejected.length > 0) {
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+				success: false,
+				message: 'Failed to send verification email',
+			});
+		}
+		return res.status(StatusCodes.OK).json({
+			success: true,
+			message: 'Verification code sent successfully',
+		});
+	});
+	verifyEmail = catchAsync(async (req, res) => {
+		const { code } = req.body;
+		console.log(`code`, code);
+		if (!code) {
+			return res.status(StatusCodes.BAD_REQUEST).json({
+				message: 'Code is required',
+			});
+		}
+		const verify = await authService.verifyEmailCode(code);
+		console.log(`verify`, verify);
+		if (!verify) {
 			return res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Invalid or expired token',
+				message: 'Invalid or expired code',
 			});
 		}
-		const user = await UserService.getUserById(decoded.id);
+		const user = await UserService.getUserById(verify.id);
 		if (!user || user === null) {
 			return res.status(StatusCodes.NOT_FOUND).json({
 				message: 'User not found',
@@ -311,6 +411,8 @@ class AuthController {
 			});
 		}
 		user.verifyEmail = true;
+		user.codeVerify = '';
+		user.codeVerifyExpires = null;
 		const updatedUser = await user.save();
 		if (!updatedUser) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -393,9 +495,9 @@ class AuthController {
 		});
 	});
 	assignRoleToUser = catchAsync(async (req, res) => {
-		const { userId, role } = req.body;
+		const { userId } = req.params;
+		const { role } = req.body;
 
-		// Validate input
 		if (!userId || !role) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
 				message: 'User ID and role are required',
@@ -410,10 +512,7 @@ class AuthController {
 			});
 		}
 
-		// Cập nhật role cho user
-		const updatedUser = await UserService.updateUser(userId, {
-			$addToSet: { roles: role },
-		});
+		const updatedUser = await AuthService.updateRoleForUser(userId, role);
 
 		if (!updatedUser) {
 			return res.status(StatusCodes.NOT_FOUND).json({
@@ -455,9 +554,8 @@ class AuthController {
 		});
 	});
 	getUsersByRole = catchAsync(async (req, res) => {
-		const { role } = req.params;
+		const { role } = req.query;
 
-		// Kiểm tra role hợp lệ
 		const validRoles = ['user', 'admin'];
 		if (!validRoles.includes(role)) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
@@ -465,7 +563,7 @@ class AuthController {
 			});
 		}
 
-		const users = await UserService.getUsersByRole(role);
+		const users = await AuthService.getUsersByRole(role);
 
 		res.status(StatusCodes.OK).json({
 			message: `Get users with role ${role} successfully`,
@@ -473,19 +571,16 @@ class AuthController {
 		});
 	});
 	assignPermissions = catchAsync(async (req, res) => {
-		const { error } = PermissionValidation.assignPermissions.validate(req.body);
-		if (error) {
+		const { id } = req.params;
+		const { permissions } = req.body;
+		console.log(`assignPermissions`, id, permissions);
+		if (!id || !permissions) {
 			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.details[0].message,
+				message: 'User ID and permissions are required',
 			});
 		}
 
-		const { userId, permissions } = req.body;
-
-		const updatedUser = await UserService.assignPermissions(
-			userId,
-			permissions
-		);
+		const updatedUser = await AuthService.assignPermissions(id, permissions);
 
 		if (!updatedUser) {
 			return res.status(StatusCodes.NOT_FOUND).json({
@@ -510,7 +605,7 @@ class AuthController {
 			});
 		}
 
-		const updatedUser = await UserService.revokePermissions(
+		const updatedUser = await AuthService.revokePermissions(
 			userId,
 			permissions
 		);
