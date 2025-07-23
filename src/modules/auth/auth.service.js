@@ -1,86 +1,56 @@
-import jwt from 'jsonwebtoken';
-import User from '../user/user.model.js';
 import dotenv from 'dotenv';
+import AuthRepository from './auth.repository.js';
 dotenv.config();
 class AuthService {
-	static async generateRefreshToken(payload) {
-		return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-			expiresIn: '15d',
-		});
+	constructor() {
+		this.authRepo = AuthRepository;
 	}
-	static async generateAccessToken(payload) {
-		return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-			expiresIn: '1h',
-		});
-	}
-	static async generateResetToken(payload) {
-		return jwt.sign(payload, process.env.RESET_TOKEN_SECRET, {
-			expiresIn: '15m',
-		});
-	}
-	static async verifyResetToken(token) {
-		try {
-			return jwt.verify(token, process.env.RESET_TOKEN_SECRET);
-		} catch (error) {
-			throw new Error('Invalid or expired reset token');
-		}
-	}
-	static async verifyRefreshToken(token) {
-		if (!token) {
-			throw new Error('Refresh token is required');
-		}
-		try {
-			return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-		} catch (error) {
-			throw new Error('Invalid or expired refresh token');
-		}
-	}
-	static async verifyEmailCode(code) {
+	async verifyEmailCode(code) {
 		if (!code) {
 			throw new Error('Email verification code is required');
 		}
-		const user = await User.findOne({ codeVerify: code });
-		if (!user) {
-			throw new Error('Invalid or expired email verification code');
-		}
+		const user = await this.authRepo.findOne({ codeVerify: code });
 		if (user.codeVerifyExpires < Date.now()) {
 			throw new Error('Email verification code has expired');
 		}
 		return user;
 	}
-	static async updateUser(userId, updateData) {
-		return await User.findByIdAndUpdate(userId, updateData, { new: true });
+	async updateUser(userId, updateData) {
+		if (!userId || !updateData) {
+			throw new Error('User ID and update data are required');
+		}
+		return this.authRepo.findByIdAndUpdate(userId, updateData);
 	}
-
-	static async getUsersByRole(role) {
-		return await User.find({ roles: role }).select('-password -__v');
+	async getUsersByRole(role) {
+		if (!role) {
+			throw new Error('Role is required to fetch users');
+		}
+		return this.authRepo.find({ roles: role }).select('-password -__v');
 	}
-	static async assignPermissions(id, permissions) {
-		return await User.findByIdAndUpdate(
-			id,
-			{ $addToSet: { permissions: permissions } },
-			{ new: true }
-		);
+	async assignPermissions(id, permissions) {
+		if (!id || !permissions) {
+			throw new Error('User ID and permissions are required');
+		}
+		return this.authRepo.assignPermissions(id, permissions);
 	}
-
-	static async revokePermissions(userId, permissions) {
-		return await User.findByIdAndUpdate(
-			userId,
-			{ $pull: { permissions: permissions } },
-			{ new: true }
-		);
+	async revokePermissions(userId, permissions) {
+		if (!userId || !permissions) {
+			throw new Error('User ID and permissions are required');
+		}
+		return this.authRepo.revokePermissions(userId, permissions);
 	}
-
-	static async getUserWithPermissions(userId) {
-		return await User.findById(userId).select('permissions roles');
+	async getUserWithPermissions(userId) {
+		if (!userId) {
+			throw new Error('User ID is required');
+		}
+		return this.authRepo.findById(userId).select('permissions roles');
 	}
-	static async updateRoleForUser(userId, role) {
-		return await User.findByIdAndUpdate(
-			userId,
-			{ $set: { roles: role } },
-			{ new: true }
-		);
+	async updateRoleForUser(userId, role) {
+		if (!userId || !role) {
+			throw new Error('User ID and role are required');
+		}
+		return this.authRepo.updateRoleForUser(userId, role);
 	}
 }
 
-export default AuthService;
+export default new AuthService();

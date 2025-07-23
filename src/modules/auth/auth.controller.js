@@ -11,14 +11,22 @@ import User from '../user/user.model.js';
 import { generateRandomCode } from '../../utils/generateRandomCode.js';
 import dotenv from 'dotenv';
 import AuthService from './auth.service.js';
+import { Token } from '../../utils/token.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 dotenv.config();
 
 class AuthController {
 	register = catchAsync(async (req, res) => {
 		const { fullName, dayOfBirth, phoneNumber, email, password } = req.body;
 		if (!fullName || !dayOfBirth || !phoneNumber || !email || !password) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'All fields are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -30,20 +38,27 @@ class AuthController {
 			password,
 		});
 		if (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const userExists = await UserService.checkUserExists(email);
 		if (userExists) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'User already exists',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const hashedPassword = await UserService.hashPassword(password);
 		if (!hashedPassword) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatFail({
+				res,
 				message: 'Failed to hash password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 		const userData = {
@@ -57,29 +72,36 @@ class AuthController {
 		const newUser = await UserService.createUser(userData);
 
 		if (!newUser) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to create user',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
 		const { password: _, ...userWithoutPassword } = newUser.toObject();
 		if (!userWithoutPassword) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: 'Failed to create user',
+			return formatFail({
+				res,
+				message: 'Failed to create user without password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.CREATED).json({
-			message: 'User created successfully',
-			user: userWithoutPassword,
+		return formatSuccess({
+			res,
+			data: userWithoutPassword,
+			message: 'User registered successfully',
+			code: StatusCodes.CREATED,
 		});
 	});
 	login = catchAsync(async (req, res) => {
 		const { email, password } = req.body;
-		console.log(email, password);
 
 		if (!email || !password) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Email and password are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -88,15 +110,20 @@ class AuthController {
 			password,
 		});
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
 		const user = await UserService.checkUserExists(email);
 		if (!user) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 		const isPasswordValid = await UserService.comparePassword(
@@ -104,8 +131,10 @@ class AuthController {
 			user.password
 		);
 		if (!isPasswordValid) {
-			return res.status(StatusCodes.UNAUTHORIZED).json({
-				message: 'Invalid password',
+			return formatFail({
+				res,
+				message: 'Invalid email or password',
+				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
 
@@ -117,12 +146,14 @@ class AuthController {
 			permissions: user.permissions,
 		};
 
-		const accessToken = await authService.generateAccessToken(payload);
-		const refreshToken = await authService.generateRefreshToken(payload);
+		const accessToken = await Token.generateAccessToken(payload);
+		const refreshToken = await Token.generateRefreshToken(payload);
 
 		if (!accessToken || !refreshToken) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to generate tokens',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
@@ -136,23 +167,28 @@ class AuthController {
 			secure: process.env.NODE_ENV === 'production',
 			maxAge: 60 * 60 * 1000,
 		});
-		return res.status(StatusCodes.OK).json({
-			message: 'Login successful',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: user._id,
 				fullName: user.fullName,
 				email: user.email,
-				phoneNumber: user.phoneNumber,
+				roles: user.roles,
+				permissions: user.permissions,
 			},
-			accessToken,
-			refreshToken,
+			message: 'Login successful',
+			code: StatusCodes.OK,
 		});
 	});
 	loginWithGoogle = catchAsync(async (req, res) => {
 		const user = req.user;
 
 		if (!user) {
-			return res.status(401).json({ message: 'Google authentication failed' });
+			return formatFail({
+				res,
+				message: 'Google authentication failed',
+				code: StatusCodes.UNAUTHORIZED,
+			});
 		}
 
 		const token = jwt.sign(
@@ -161,35 +197,45 @@ class AuthController {
 			{ expiresIn: '1h' }
 		);
 
-		return res.status(StatusCodes.OK).json({
-			message: 'Login successful',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: user._id,
 				fullName: user.fullName,
 				email: user.email,
+				roles: user.roles,
+				permissions: user.permissions,
 			},
 			token,
+			message: 'Login with Google successful',
 		});
 	});
 	forgotPassword = catchAsync(async (req, res) => {
 		const { email } = req.body;
 		if (!email) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Email is required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const { error } = AuthValidation.forgotPasswordValidation.validate({
 			email,
 		});
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const user = await UserService.checkUserExists(email);
 		if (!user) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
@@ -199,10 +245,12 @@ class AuthController {
 			email: user.email,
 			role: user.roles,
 		};
-		const resetToken = await authService.generateResetToken(payload);
+		const resetToken = await Token.generateResetToken(payload);
 		if (!resetToken || resetToken === null) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to generate reset token',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
@@ -236,22 +284,27 @@ class AuthController {
 				</div>
 			`,
 		});
-		console.log(`check info`, info);
 		if (!info || info.rejected.length > 0) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to send reset email',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Password reset email sent successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	resetPassword = catchAsync(async (req, res) => {
 		const { token, newPassword, confirmPassword } = req.body;
 
 		if (!token || !newPassword || !confirmPassword) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Token, new password, and confirm password are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -262,26 +315,35 @@ class AuthController {
 		});
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
-		const decoded = await authService.verifyResetToken(token);
+		const decoded = await Token.verifyResetToken(token);
 		if (!decoded) {
-			return res.status(StatusCodes.UNAUTHORIZED).json({
+			return formatFail({
+				res,
 				message: 'Invalid or expired token',
+				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
 		const user = await UserService.getUserById(decoded.id);
 		if (!user || user === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 		const hashedPassword = await UserService.hashPassword(newPassword);
 		if (!hashedPassword) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to hash new password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 		const updatedUser = await UserService.updatePasswordForUser(
@@ -289,39 +351,47 @@ class AuthController {
 			hashedPassword
 		);
 		if (!updatedUser) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to update password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Password reset successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	logout = catchAsync(async (req, res) => {
 		res.clearCookie('refreshToken');
 		res.clearCookie('accessToken');
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Logout successful',
+			code: StatusCodes.OK,
 		});
 	});
 	sendCodeToVerifyEmail = catchAsync(async (req, res) => {
 		const { email } = req.body;
 
 		if (!email) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
+			return formatFail({
+				res,
 				message: 'Email is required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		// Validate email format
 		const { error } = AuthValidation.sendCodeToVerifyEmailValidation.validate({
 			email,
 		});
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
@@ -329,17 +399,19 @@ class AuthController {
 		const user = await UserService.getUserByEmail(email);
 
 		if (!user) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				success: false,
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
 		// Check if email is already verified
 		if (user.verifyEmail) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				success: false,
+			return formatFail({
+				res,
 				message: 'Email is already verified',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -374,40 +446,49 @@ class AuthController {
 		});
 		console.log(`check info`, infoEmail);
 		if (!infoEmail || infoEmail.rejected.length > 0) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				success: false,
+			return formatError({
+				res,
 				message: 'Failed to send verification email',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			success: true,
+		return formatSuccess({
+			res,
 			message: 'Verification code sent successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	verifyEmail = catchAsync(async (req, res) => {
 		const { code } = req.body;
-		console.log(`code`, code);
 		if (!code) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Code is required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const verify = await authService.verifyEmailCode(code);
 		console.log(`verify`, verify);
 		if (!verify) {
-			return res.status(StatusCodes.UNAUTHORIZED).json({
+			return formatFail({
+				res,
 				message: 'Invalid or expired code',
+				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
 		const user = await UserService.getUserById(verify.id);
 		if (!user || user === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 		if (user.verifyEmail) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Email already verified',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		user.verifyEmail = true;
@@ -415,12 +496,16 @@ class AuthController {
 		user.codeVerifyExpires = null;
 		const updatedUser = await user.save();
 		if (!updatedUser) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to verify email',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Email verified successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	changePassword = catchAsync(async (req, res) => {
@@ -428,14 +513,18 @@ class AuthController {
 		const userId = req.user?.id;
 
 		if (!oldPassword || !newPassword) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Old password and new password are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		if (!userId) {
-			return res.status(StatusCodes.UNAUTHORIZED).json({
+			return formatFail({
+				res,
 				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
 
@@ -445,15 +534,20 @@ class AuthController {
 		});
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
 		const user = await UserService.getUserById(userId);
 		if (!user) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
@@ -462,36 +556,46 @@ class AuthController {
 			user.password
 		);
 		if (!isPasswordValid) {
-			return res.status(StatusCodes.UNAUTHORIZED).json({
+			return formatFail({
+				res,
 				message: 'Invalid old password',
+				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
 
 		const hashedPassword = await UserService.hashPassword(newPassword);
 		if (!hashedPassword) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to hash new password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
 		user.password = hashedPassword;
 		const updatedUser = await user.save();
 		if (!updatedUser) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to update password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Password changed successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	getAllRoles = catchAsync(async (req, res) => {
 		const rolesEnum = User.schema.path('roles').caster.enumValues;
 
-		res.status(StatusCodes.OK).json({
-			message: 'Get all roles successfully',
+		return formatSuccess({
+			res,
 			data: rolesEnum || ['user', 'admin'],
+			message: 'Get all roles successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	assignRoleToUser = catchAsync(async (req, res) => {
@@ -499,40 +603,50 @@ class AuthController {
 		const { role } = req.body;
 
 		if (!userId || !role) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'User ID and role are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		// Kiểm tra role hợp lệ
 		const validRoles = ['user', 'admin'];
 		if (!validRoles.includes(role)) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: `Invalid role. Valid roles are: ${validRoles.join(', ')}`,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const updatedUser = await AuthService.updateRoleForUser(userId, role);
 
 		if (!updatedUser) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
-		res.status(StatusCodes.OK).json({
-			message: 'Role assigned successfully',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: updatedUser._id,
 				roles: updatedUser.roles,
 			},
+			message: 'Role assigned successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	revokeRoleFromUser = catchAsync(async (req, res) => {
 		const { userId, role } = req.body;
 		if (!userId || !role) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'User ID and role are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const updatedUser = await UserService.updateUser(userId, {
@@ -540,17 +654,21 @@ class AuthController {
 		});
 
 		if (!updatedUser) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
-		res.status(StatusCodes.OK).json({
-			message: 'Role revoked successfully',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: updatedUser._id,
 				roles: updatedUser.roles,
 			},
+			message: 'Role revoked successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	getUsersByRole = catchAsync(async (req, res) => {
@@ -558,16 +676,20 @@ class AuthController {
 
 		const validRoles = ['user', 'admin'];
 		if (!validRoles.includes(role)) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: `Invalid role. Valid roles are: ${validRoles.join(', ')}`,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const users = await AuthService.getUsersByRole(role);
 
-		res.status(StatusCodes.OK).json({
-			message: `Get users with role ${role} successfully`,
+		return formatSuccess({
+			res,
 			data: users,
+			message: `Get users with role ${role} successfully`,
+			code: StatusCodes.OK,
 		});
 	});
 	assignPermissions = catchAsync(async (req, res) => {
@@ -575,33 +697,41 @@ class AuthController {
 		const { permissions } = req.body;
 		console.log(`assignPermissions`, id, permissions);
 		if (!id || !permissions) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'User ID and permissions are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const updatedUser = await AuthService.assignPermissions(id, permissions);
 
 		if (!updatedUser) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
-		res.status(StatusCodes.OK).json({
-			message: 'Permissions assigned successfully',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: updatedUser._id,
 				permissions: updatedUser.permissions,
 			},
+			message: 'Permissions assigned successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	revokePermissions = catchAsync(async (req, res) => {
 		const { userId, permissions } = req.body;
 
 		if (!userId || !permissions) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'User ID and permissions are required',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -611,17 +741,21 @@ class AuthController {
 		);
 
 		if (!updatedUser) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
-		res.status(StatusCodes.OK).json({
-			message: 'Permissions revoked successfully',
-			user: {
+		return formatSuccess({
+			res,
+			data: {
 				id: updatedUser._id,
 				permissions: updatedUser.permissions,
 			},
+			message: 'Permissions revoked successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	getUserPermissions = catchAsync(async (req, res) => {
@@ -629,14 +763,18 @@ class AuthController {
 
 		const user = await UserService.getUserById(userId);
 		if (!user) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 
-		res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
+			data: user.permissions,
 			message: 'Get user permissions successfully',
-			permissions: user.permissions,
+			code: StatusCodes.OK,
 		});
 	});
 }

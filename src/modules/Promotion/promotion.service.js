@@ -21,7 +21,6 @@ class PromotionService {
 			throw new Error('Promotion with this title already exists');
 		}
 
-		// Validate date range
 		const startDate = new Date(promotionData.startDate);
 		const endDate = new Date(promotionData.endDate);
 

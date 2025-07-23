@@ -1,6 +1,11 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import { StatusCodes } from 'http-status-codes';
 import BannerService from './banner.service.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 
 class BannerController {
 	constructor() {
@@ -30,98 +35,113 @@ class BannerController {
 		};
 		const createBanner = await BannerService.createBanner(data);
 		if (!createBanner && createBanner === null) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatError({
+				res,
 				message: 'Can not create banner.',
-				access: false,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.CREATED).json({
+		return formatSuccess({
+			res,
+			data: createBanner,
 			message: 'Created banner successfully.',
-			access: true,
+			code: StatusCodes.CREATED,
 		});
 	});
 	deleteBanner = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		if (!id) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Id is required.',
-				success: false,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const deleted = await BannerService.deleteBanner(id);
 		if (!deleted) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatError({
+				res,
 				message: 'Delete banner failed.',
-				access: false,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Detele banner successfully',
-			access: true,
+		return formatSuccess({
+			res,
+			message: 'Delete banner successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	getAllBanners = catchAsync(async (req, res) => {
 		const banners = await BannerService.getAllBanners();
 		if (!banners || banners.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'No banners found.',
-				access: false,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Get all banners successfully.',
-			access: true,
+		return formatSuccess({
+			res,
 			data: banners,
+			message: 'Get all banners successfully.',
+			code: StatusCodes.OK,
 		});
 	});
 	getActiveBanners = catchAsync(async (req, res) => {
 		const banners = await BannerService.getActiveBanners();
 		if (!banners || banners.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'No active banners found.',
-				access: false,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Get active banners successfully.',
-			access: true,
+		return formatSuccess({
+			res,
 			data: banners,
+			message: 'Get active banners successfully.',
+			code: StatusCodes.OK,
 		});
 	});
 	updateBanner = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		const data = req.body;
 		if (!id || !data) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Id and data are required.',
-				access: false,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		const updatedBanner = await BannerService.updateBanner(id, data);
 		if (!updatedBanner) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatError({
+				res,
 				message: 'Update banner failed.',
-				access: false,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Update banner successfully.',
-			access: true,
+		return formatSuccess({
+			res,
 			data: updatedBanner,
+			message: 'Update banner successfully.',
+			code: StatusCodes.OK,
 		});
 	});
 	reorderBanner = catchAsync(async (req, res) => {
 		const { bannerIDs } = req.body;
 		if (!bannerIDs || bannerIDs.length === 0) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Banner IDs are required.',
-				access: false,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		await BannerService.reorderBanner(bannerIDs);
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Reordered banners successfully.',
-			access: true,
+			code: StatusCodes.OK,
 		});
 	});
 }

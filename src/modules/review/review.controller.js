@@ -2,137 +2,199 @@ import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import { ReviewValidation } from './review.validation.js';
 import ReviewService from './review.service.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 
 class ReviewController {
-	constructor() { }
+	constructor() {}
 	createReview = catchAsync(async (req, res) => {
 		const { userId, productId, rating, comment } = req.body;
-		if (!userId || !productId || !rating) {
-			return res.status(400).json({
-				message: 'User ID, Product ID, and Rating are required!',
-			});
+
+		// Validate input data
+		if (!req.body || Object.keys(req.body).length === 0) {
+			return formatFail(
+				res,
+				'Review data is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
+		if (!userId || !productId || !rating) {
+			return formatFail(
+				res,
+				'User ID, Product ID, and Rating are required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const reviewData = {
 			userId,
 			productId,
 			rating,
 			comment,
 		};
+
 		const _ReviewValidation = ReviewValidation.create;
 		const { error } = _ReviewValidation.validate(reviewData);
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.details[0].message,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const newReview = await ReviewService.createReview(reviewData);
+
 		if (!newReview) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Failed to create review',
-			});
+			return formatError(
+				res,
+				'Failed to create review',
+				StatusCodes.INTERNAL_SERVER_ERROR
+			);
 		}
-		return res.status(StatusCodes.CREATED).json({
-			message: 'Review created successfully',
-			data: newReview,
-		});
+
+		return formatSuccess(
+			res,
+			'Review created successfully',
+			newReview,
+			StatusCodes.CREATED
+		);
 	});
 	updateReview = catchAsync(async (req, res) => {
 		const { id, rating, comment } = req.body;
-		if (!id || !rating || comment === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'ID, Rating, and Comment are required!',
-			});
+
+		// Validate input data
+		if (!req.body || Object.keys(req.body).length === 0) {
+			return formatFail(
+				res,
+				'Review data is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
+		if (!id || !rating || comment === undefined) {
+			return formatFail(
+				res,
+				'ID, Rating, and Comment are required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const reviewData = {
 			id,
 			rating,
 			comment,
 		};
+
 		const _ReviewValidation = ReviewValidation.update;
 		const { error } = _ReviewValidation.validate(reviewData);
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.details[0].message,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const updatedReview = await ReviewService.updateReview(reviewData);
+
 		if (!updatedReview) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Failed to update review',
-			});
+			return formatFail(
+				res,
+				'Review not found or update failed',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Review updated successfully',
-			data: updatedReview,
-		});
+
+		return formatSuccess(
+			res,
+			'Review updated successfully',
+			updatedReview,
+			StatusCodes.OK
+		);
 	});
 	deleteReview = catchAsync(async (req, res) => {
 		const { id } = req.params;
+
+		// Validate input
 		if (!id) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Review ID is required',
-			});
+			return formatFail(res, 'Review ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const deletedReview = await ReviewService.deleteReview(id);
+
 		if (!deletedReview) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: 'Review not found',
-			});
+			return formatFail(res, 'Review not found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Review deleted successfully',
-			data: deletedReview,
-		});
+
+		return formatSuccess(
+			res,
+			'Review deleted successfully',
+			deletedReview,
+			StatusCodes.OK
+		);
 	});
 	getReviews = catchAsync(async (req, res) => {
 		const { productId } = req.params;
+
+		// Validate input
 		if (!productId) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'Product ID is required',
-			});
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const _ReviewValidation = ReviewValidation.getReviews;
 		const { error } = _ReviewValidation.validate({ productId });
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.details[0].message,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const reviews = await ReviewService.getReviewsByProductId(productId);
+
 		if (!reviews || reviews.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: 'No reviews found for this product',
-			});
+			return formatFail(
+				res,
+				'No reviews found for this product',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Reviews retrieved successfully',
-			data: reviews,
-		});
+
+		return formatSuccess(
+			res,
+			'Reviews retrieved successfully',
+			reviews,
+			StatusCodes.OK
+		);
 	});
 	getReviewByUserId = catchAsync(async (req, res) => {
 		const { _id } = req.user;
+
+		// Validate input
 		if (!_id) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: 'User ID is required',
-			});
+			return formatFail(res, 'User ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const _ReviewValidation = ReviewValidation.getReviewById;
 		const { error } = _ReviewValidation.validate({ id: _id });
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: error.details[0].message,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const reviews = await ReviewService.getReviewsByUserId(_id);
+
 		if (!reviews || reviews.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: 'No reviews found for this user',
-			});
+			return formatFail(
+				res,
+				'No reviews found for this user',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'User reviews retrieved successfully',
-			data: reviews,
-		});
+
+		return formatSuccess(
+			res,
+			'User reviews retrieved successfully',
+			reviews,
+			StatusCodes.OK
+		);
 	});
 }
 

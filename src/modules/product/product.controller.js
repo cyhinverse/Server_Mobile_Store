@@ -1,8 +1,12 @@
 import { catchAsync } from '../../configs/catchAsync.js';
-import chalk from 'chalk';
 import { StatusCodes } from 'http-status-codes';
 import ProductService from './product.service.js';
 import ValidationProduct from './product.validation.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 
 class ProductController {
 	constructor() {
@@ -10,6 +14,15 @@ class ProductController {
 		ProductController.instance = this;
 	}
 	createProduct = catchAsync(async (req, res) => {
+		// Validate input data
+		if (!req.body || Object.keys(req.body).length === 0) {
+			return formatFail(
+				res,
+				'Product data is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const { error, value } = ValidationProduct.createProduct.validate(
 			req.body,
 			{
@@ -21,63 +34,73 @@ class ProductController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
 		const newProduct = await ProductService.createProduct(value);
 
 		if (!newProduct) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red('Failed to create product'),
-				success: false,
-			});
+			return formatError(
+				res,
+				'Failed to create product',
+				StatusCodes.INTERNAL_SERVER_ERROR
+			);
 		}
 
-		return res.status(StatusCodes.CREATED).json({
-			message: chalk.green('Product created successfully'),
-			success: true,
-			data: newProduct,
-		});
+		return formatSuccess(
+			res,
+			'Product created successfully',
+			newProduct,
+			StatusCodes.CREATED
+		);
 	});
 	deleteProduct = catchAsync(async (req, res) => {
 		const { id } = req.query;
+
+		// Validate input
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
 		console.log(`checking id: ${id}`);
 		const deletedProduct = await ProductService.deleteProduct(id);
+
 		if (!deletedProduct) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Product not found'),
-				success: false,
-			});
+			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Product deleted successfully'),
-			success: true,
-		});
+
+		return formatSuccess(
+			res,
+			'Product deleted successfully',
+			null,
+			StatusCodes.OK
+		);
 	});
 	getProductById = catchAsync(async (req, res) => {
 		const { id } = req.params;
-		if (!id && id === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const product = await ProductService.getProductById(id);
-		if (!product || product === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Product not found'),
-				success: false,
-			});
+
+		if (!product) {
+			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Product found successfully'),
-			success: true,
-			data: product,
-		});
+
+		return formatSuccess(
+			res,
+			'Product found successfully',
+			product,
+			StatusCodes.OK
+		);
 	});
 	updateProduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
@@ -91,6 +114,12 @@ class ProductController {
 			isNewProduct,
 			detail_id,
 		} = req.body;
+
+		// Validate required fields
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
 		if (
 			!name ||
 			!thumbnail ||
@@ -99,14 +128,15 @@ class ProductController {
 			!detail_id ||
 			!stock ||
 			!sold ||
-			!status ||
-			!id
+			!status
 		) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('All fields are required'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'All fields are required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
 		const productData = {
 			name,
 			thumbnail,
@@ -118,82 +148,98 @@ class ProductController {
 			detail_id,
 			id,
 		};
+
 		const _ValidationProduct = ValidationProduct.updateProduct;
 		const { error } = _ValidationProduct.validate(productData);
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
-				success: false,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const updatedProduct = await ProductService.updateProduct(id, productData);
-		if (!updatedProduct || updatedProduct === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Product not found'),
-				success: false,
-			});
+
+		if (!updatedProduct) {
+			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Product updated successfully'),
-			success: true,
-			data: updatedProduct,
-		});
+
+		return formatSuccess(
+			res,
+			'Product updated successfully',
+			updatedProduct,
+			StatusCodes.OK
+		);
 	});
 	getAllProducts = catchAsync(async (req, res) => {
 		const products = await ProductService.getAllProducts();
+
 		if (!products || products.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No products found'),
-				success: false,
-			});
+			return formatFail(res, 'No products found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Products retrieved successfully'),
-			success: true,
-			data: products,
-		});
+
+		return formatSuccess(
+			res,
+			'Products retrieved successfully',
+			products,
+			StatusCodes.OK
+		);
 	});
 	getProductByCategory = catchAsync(async (req, res) => {
 		const { category_id } = req.params;
-		if (!category_id && category_id === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Category ID is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!category_id) {
+			return formatFail(
+				res,
+				'Category ID is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
 		const products = await ProductService.getProductByCategory(category_id);
+
 		if (!products || products.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No products found for this category'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'No products found for this category',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Products retrieved successfully'),
-			success: true,
-			data: products,
-		});
+
+		return formatSuccess(
+			res,
+			'Products retrieved successfully',
+			products,
+			StatusCodes.OK
+		);
 	});
 	searchProducts = catchAsync(async (req, res) => {
 		const { input } = req.query;
+
+		// Validate input
 		if (!input || input === '') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Search input is required'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Search input is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
 		const products = await ProductService.searchProducts(input);
+
 		if (!products || products.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No products found matching the search criteria'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'No products found matching the search criteria',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Products found successfully'),
-			success: true,
-			data: products,
-		});
+
+		return formatSuccess(
+			res,
+			'Products found successfully',
+			products,
+			StatusCodes.OK
+		);
 	});
 	filterProducts = catchAsync(async (req, res) => {
 		const {
@@ -212,6 +258,7 @@ class ProductController {
 			page = 1,
 			limit = 10,
 		} = req.query;
+
 		const filter = {
 			name,
 			maxPrice,
@@ -226,136 +273,205 @@ class ProductController {
 			battery,
 			os,
 		};
+
 		const _ValidationProduct = ValidationProduct.filterProducts;
 		const { error } = _ValidationProduct.validate(filter);
+
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.details[0].message),
-				success: false,
-			});
+			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
+
 		const filteredProducts = await ProductService.filterProducts(
 			filter,
 			page,
 			limit
 		);
+
 		if (!filteredProducts || filteredProducts.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No products found matching the filter criteria'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'No products found matching the filter criteria',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Products filtered successfully'),
-			success: true,
-			data: filteredProducts,
-		});
+
+		return formatSuccess(
+			res,
+			'Products filtered successfully',
+			filteredProducts,
+			StatusCodes.OK
+		);
 	});
 	getProductsBySlug = catchAsync(async (req, res) => {
 		const { slug } = req.params;
-		if (!slug || slug === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Slug is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!slug) {
+			return formatFail(res, 'Slug is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const products = await ProductService.getProductsBySlug(slug);
+
+		if (!products || products.length === 0) {
+			return formatFail(
+				res,
+				'No products found for this slug',
+				StatusCodes.NOT_FOUND
+			);
+		}
+
+		return formatSuccess(
+			res,
+			'Products retrieved successfully',
+			products,
+			StatusCodes.OK
+		);
 	});
 	getProductDetails = catchAsync(async (req, res) => {
 		const { slug } = req.params;
-		if (!slug || slug === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Slug is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!slug) {
+			return formatFail(res, 'Slug is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const productDetails = await ProductService.getProductDetails(slug);
-		if (!productDetails || productDetails === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Product details not found'),
-				success: false,
-			});
+
+		if (!productDetails) {
+			return formatFail(
+				res,
+				'Product details not found',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Product details retrieved successfully'),
-			success: true,
-			data: productDetails,
-		});
+
+		return formatSuccess(
+			res,
+			'Product details retrieved successfully',
+			productDetails,
+			StatusCodes.OK
+		);
 	});
 	updateDetailForPorduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		const { data } = req.body;
-		if (!data || !id) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID and data are required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
+		if (!data) {
+			return formatFail(
+				res,
+				'Product data is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const updatedProduct = await ProductService.updateProduct(id, data);
-		if (!updatedProduct || updatedProduct === null) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Product not found'),
-				success: false,
-			});
+
+		if (!updatedProduct) {
+			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Product details updated successfully'),
-			success: true,
-			data: updatedProduct,
-		});
+
+		return formatSuccess(
+			res,
+			'Product details updated successfully',
+			updatedProduct,
+			StatusCodes.OK
+		);
 	});
 	getListVariantForProduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
-		if (!id || id === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const variants = await ProductService.getListVariantForProduct(id);
+
 		if (!variants || variants.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No variants found for this product'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'No variants found for this product',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Variants retrieved successfully'),
-			success: true,
-			data: variants,
-		});
+
+		return formatSuccess(
+			res,
+			'Variants retrieved successfully',
+			variants,
+			StatusCodes.OK
+		);
 	});
-	getVariantById = catchAsync(async (req, res) => {});
+	getVariantById = catchAsync(async (req, res) => {
+		const { id } = req.params;
+
+		// Validate input
+		if (!id) {
+			return formatFail(res, 'Variant ID is required', StatusCodes.BAD_REQUEST);
+		}
+
+		const variant = await ProductService.getVariantById(id);
+
+		if (!variant) {
+			return formatFail(res, 'Variant not found', StatusCodes.NOT_FOUND);
+		}
+
+		return formatSuccess(
+			res,
+			'Variant retrieved successfully',
+			variant,
+			StatusCodes.OK
+		);
+	});
 	checkStock = catchAsync(async (req, res) => {
 		const { productId, quantity } = req.body;
+
+		// Validate input
 		if (!productId || !quantity) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID and quantity are required'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Product ID and quantity are required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
+
 		const isAvailable = await ProductService.checkStock(productId, quantity);
+
 		if (!isAvailable) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Insufficient stock for the requested product'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Insufficient stock for the requested product',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Stock is available'),
-			success: true,
-			data: isAvailable,
-		});
+
+		return formatSuccess(
+			res,
+			'Stock is available',
+			isAvailable,
+			StatusCodes.OK
+		);
 	});
 	createVariantForProductId = catchAsync(async (req, res) => {
 		const { productId } = req.params;
 		const { variantData } = req.body;
 
-		if (!productId || !variantData) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID and variant data are required'),
-				success: false,
-			});
+		// Validate input
+		if (!productId) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
+		if (!variantData) {
+			return formatFail(
+				res,
+				'Variant data is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
 
 		const newVariant = await ProductService.createVariantForProduct(
@@ -364,132 +480,132 @@ class ProductController {
 		);
 
 		if (!newVariant) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red('Failed to create variant for product'),
-				success: false,
-			});
+			return formatError(
+				res,
+				'Failed to create variant for product',
+				StatusCodes.INTERNAL_SERVER_ERROR
+			);
 		}
 
-		return res.status(StatusCodes.CREATED).json({
-			message: chalk.green('Variant created successfully'),
-			success: true,
-			data: newVariant,
-		});
+		return formatSuccess(
+			res,
+			'Variant created successfully',
+			newVariant,
+			StatusCodes.CREATED
+		);
 	});
 	updateVariantForProduct = catchAsync(async (req, res) => {
 		const { productId } = req.params;
 		const { data } = req.body;
-		if (!productId || !data) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID and variant data are required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!productId) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
+		if (!data) {
+			return formatFail(
+				res,
+				'Variant data is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const updatedVariant = await ProductService.updateVariantForProduct(
 			productId,
 			data
 		);
+
 		if (!updatedVariant) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Variant not found or update failed'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Variant not found or update failed',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Variant updated successfully'),
-			success: true,
-			data: updatedVariant,
-		});
-	});
-	getListVariantForProduct = catchAsync(async (req, res) => {
-		const { productId } = req.params;
-		if (!productId || productId === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID is required'),
-				success: false,
-			});
-		}
-		const variants = await ProductService.getListVariantForProduct(productId);
-		if (!variants || variants.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('No variants found for this product'),
-				success: false,
-			});
-		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Variants retrieved successfully'),
-			success: true,
-			data: variants,
-		});
+
+		return formatSuccess(
+			res,
+			'Variant updated successfully',
+			updatedVariant,
+			StatusCodes.OK
+		);
 	});
 	deleteVariantForProduct = catchAsync(async (req, res) => {
 		const { variantId } = req.params;
-		if (!variantId || variantId === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Variant ID is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!variantId) {
+			return formatFail(res, 'Variant ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const deletedVariant = await ProductService.deleteVariantForProduct(
 			variantId
 		);
+
 		if (!deletedVariant) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Variant not found or delete failed'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Variant not found or delete failed',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Variant deleted successfully'),
-			success: true,
-			data: deletedVariant,
-		});
+
+		return formatSuccess(
+			res,
+			'Variant deleted successfully',
+			deletedVariant,
+			StatusCodes.OK
+		);
 	});
 	getVariantByProductId = catchAsync(async (req, res) => {
 		const { productId } = req.params;
-		if (!productId || productId === undefined) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Product ID is required'),
-				success: false,
-			});
+
+		// Validate input
+		if (!productId) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
+
 		const variant = await ProductService.getVariantByProductId(productId);
+
 		if (!variant) {
-			return res.status(StatusCodes.NOT_FOUND).json({
-				message: chalk.red('Variant not found for this product'),
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Variant not found for this product',
+				StatusCodes.NOT_FOUND
+			);
 		}
-		return res.status(StatusCodes.OK).json({
-			message: chalk.green('Variant retrieved successfully'),
-			success: true,
-			data: variant,
-		});
+
+		return formatSuccess(
+			res,
+			'Variant retrieved successfully',
+			variant,
+			StatusCodes.OK
+		);
 	});
 	checkAndUpdateStock = catchAsync(async (req, res) => {
 		const { variantId, quantity } = req.body;
+
+		// Validate input
 		if (!variantId || !quantity) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Variant ID and quantity are required'),
-				success: false,
-			});
-		}
-		try {
-			const updatedVariant = await ProductService.checkAndUpdateStock(
-				variantId,
-				quantity
+			return formatFail(
+				res,
+				'Variant ID and quantity are required',
+				StatusCodes.BAD_REQUEST
 			);
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Stock updated successfully'),
-				success: true,
-				data: updatedVariant,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
 		}
+
+		const updatedVariant = await ProductService.checkAndUpdateStock(
+			variantId,
+			quantity
+		);
+
+		return formatSuccess(
+			res,
+			'Stock updated successfully',
+			updatedVariant,
+			StatusCodes.OK
+		);
 	});
 }
 

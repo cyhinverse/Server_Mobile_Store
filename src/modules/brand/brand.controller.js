@@ -2,6 +2,11 @@ import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import brandService from './brand.service.js';
 import { ValidationBrand } from './brand.validation.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 
 class BrandController {
 	constructor() {
@@ -11,8 +16,10 @@ class BrandController {
 		const { name, logo, description, isActive } = req.body;
 
 		if (!name) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Name is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -25,8 +32,11 @@ class BrandController {
 		});
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
@@ -37,22 +47,28 @@ class BrandController {
 			isActive,
 		});
 		if (!newBrand) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: 'Failed to create brand',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 
-		return res.status(StatusCodes.CREATED).json({
-			message: 'Brand created successfully',
+		return formatSuccess({
+			res,
 			data: newBrand,
+			message: 'Brand created successfully',
+			code: StatusCodes.CREATED,
 		});
 	});
 	deleteBrand = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
 		if (!id || id === 'undefined') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Brand ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -60,20 +76,27 @@ class BrandController {
 		const { error } = validationBrand.validate({ id });
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
 		try {
 			const deleted = await this.brandService.deleteBrand(id);
-			return res.status(StatusCodes.OK).json({
-				message: 'Brand deleted successfully',
+			return formatSuccess({
+				res,
 				data: deleted,
+				message: 'Brand deleted successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: error.message,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 	});
@@ -82,8 +105,10 @@ class BrandController {
 		const { name, logo, description, isActive } = req.body;
 
 		if (!id) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Brand ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -97,8 +122,11 @@ class BrandController {
 		});
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
@@ -111,39 +139,51 @@ class BrandController {
 
 			const updatedBrand = await this.brandService.updateBrand(id, updateData);
 
-			return res.status(StatusCodes.OK).json({
-				message: 'Brand updated successfully',
+			return formatSuccess({
+				res,
 				data: updatedBrand,
+				message: 'Brand updated successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.message,
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 	});
 	getAllBrands = catchAsync(async (req, res) => {
 		try {
 			const brands = await this.brandService.getAllBrands();
-			return res.status(StatusCodes.OK).json({
-				message: 'Brands retrieved successfully',
+			return formatSuccess({
+				res,
 				data: brands,
+				message: 'Brands retrieved successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 	});
 	getActiveBrands = catchAsync(async (req, res) => {
 		try {
 			const brands = await this.brandService.getActiveBrands();
-			return res.status(StatusCodes.OK).json({
-				message: 'Active brands retrieved successfully',
+			return formatSuccess({
+				res,
 				data: brands,
+				message: 'Active brands retrieved successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 	});
@@ -151,8 +191,10 @@ class BrandController {
 		const { id } = req.params;
 
 		if (!id || id === 'undefined') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Brand ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -160,20 +202,27 @@ class BrandController {
 		const { error } = validationBrand.validate({ id });
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
 		try {
 			const brand = await this.brandService.getBrandById(id);
-			return res.status(StatusCodes.OK).json({
-				message: 'Brand retrieved successfully',
+			return formatSuccess({
+				res,
 				data: brand,
+				message: 'Brand retrieved successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: error.message,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 	});
@@ -189,8 +238,11 @@ class BrandController {
 		});
 
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
@@ -202,13 +254,20 @@ class BrandController {
 				isActive: isActive ? JSON.parse(isActive) : undefined,
 			});
 
-			return res.status(StatusCodes.OK).json({
+			return formatSuccess({
+				res,
+				data: result.data,
 				message: 'Brands retrieved successfully',
-				...result,
+				code: StatusCodes.OK,
+				meta: {
+					pagination: result.pagination,
+				},
 			});
 		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+			return formatError({
+				res,
 				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
 	});
@@ -216,20 +275,26 @@ class BrandController {
 		const { id } = req.params;
 
 		if (!id || id === 'undefined') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Brand ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		try {
 			const brand = await this.brandService.toggleBrandStatus(id);
-			return res.status(StatusCodes.OK).json({
-				message: 'Brand status updated successfully',
+			return formatSuccess({
+				res,
 				data: brand,
+				message: 'Brand status updated successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: error.message,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 	});
@@ -237,20 +302,26 @@ class BrandController {
 		const { name } = req.params;
 
 		if (!name) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Brand name is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		try {
 			const brand = await this.brandService.getBrandByName(name);
-			return res.status(StatusCodes.OK).json({
-				message: 'Brand retrieved successfully',
+			return formatSuccess({
+				res,
 				data: brand,
+				message: 'Brand retrieved successfully',
+				code: StatusCodes.OK,
 			});
 		} catch (error) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: error.message,
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
 	});

@@ -4,6 +4,11 @@ import { StatusCodes } from 'http-status-codes';
 import joi from 'joi';
 import PromotionService from './promotion.service.js';
 import PromotionValidation from './promotion.validation.js';
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 
 class PromotionController {
 	constructor() {
@@ -12,6 +17,15 @@ class PromotionController {
 	}
 
 	createPromotion = catchAsync(async (req, res) => {
+		// Validate input data
+		if (!req.body || Object.keys(req.body).length === 0) {
+			return formatFail(
+				res,
+				'Promotion data is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
 		const { error, value } = PromotionValidation.createPromotion.validate(
 			req.body,
 			{
@@ -23,27 +37,30 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		try {
-			const promotion = await PromotionService.createPromotion(value);
+		const promotion = await PromotionService.createPromotion(value);
 
-			return res.status(StatusCodes.CREATED).json({
-				message: chalk.green('Promotion created successfully'),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotion) {
+			return formatError(
+				res,
+				'Failed to create promotion',
+				StatusCodes.INTERNAL_SERVER_ERROR
+			);
 		}
+
+		return formatSuccess(
+			res,
+			'Promotion created successfully',
+			promotion,
+			StatusCodes.CREATED
+		);
 	});
 
 	getAllPromotions = catchAsync(async (req, res) => {
@@ -58,28 +75,29 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		try {
-			const result = await PromotionService.getAllPromotions(value);
+		const result = await PromotionService.getAllPromotions(value);
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Promotions retrieved successfully'),
-				data: result.promotions,
+		if (!result || !result.promotions) {
+			return formatFail(res, 'No promotions found', StatusCodes.NOT_FOUND);
+		}
+
+		return formatSuccess(
+			res,
+			'Promotions retrieved successfully',
+			{
+				promotions: result.promotions,
 				pagination: result.pagination,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
-		}
+			},
+			StatusCodes.OK
+		);
 	});
 
 	getPromotionById = catchAsync(async (req, res) => {
@@ -94,32 +112,26 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		try {
-			const promotion = await PromotionService.getPromotionById(value.id);
+		const promotion = await PromotionService.getPromotionById(value.id);
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Promotion retrieved successfully'),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.INTERNAL_SERVER_ERROR;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotion) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
 		}
+
+		return formatSuccess(
+			res,
+			'Promotion retrieved successfully',
+			promotion,
+			StatusCodes.OK
+		);
 	});
 
 	updatePromotion = catchAsync(async (req, res) => {
@@ -139,46 +151,41 @@ class PromotionController {
 			const errorMessages = paramsValidation.error.details.map(
 				(err) => err.message
 			);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Invalid promotion ID'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Invalid promotion ID',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
 		if (bodyValidation.error) {
 			const errorMessages = bodyValidation.error.details.map(
 				(err) => err.message
 			);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
-		}
-
-		try {
-			const promotion = await PromotionService.updatePromotion(
-				paramsValidation.value.id,
-				bodyValidation.value
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
 			);
-
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Promotion updated successfully'),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.BAD_REQUEST;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
 		}
+
+		const promotion = await PromotionService.updatePromotion(
+			paramsValidation.value.id,
+			bodyValidation.value
+		);
+
+		if (!promotion) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+		}
+
+		return formatSuccess(
+			res,
+			'Promotion updated successfully',
+			promotion,
+			StatusCodes.OK
+		);
 	});
 
 	deletePromotion = catchAsync(async (req, res) => {
@@ -193,31 +200,26 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		try {
-			await PromotionService.deletePromotion(value.id);
+		const result = await PromotionService.deletePromotion(value.id);
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Promotion deleted successfully'),
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.INTERNAL_SERVER_ERROR;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!result) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
 		}
+
+		return formatSuccess(
+			res,
+			'Promotion deleted successfully',
+			null,
+			StatusCodes.OK
+		);
 	});
 
 	togglePromotionStatus = catchAsync(async (req, res) => {
@@ -232,53 +234,47 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		try {
-			const promotion = await PromotionService.togglePromotionStatus(value.id);
+		const promotion = await PromotionService.togglePromotionStatus(value.id);
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green(
-					`Promotion ${
-						promotion.isActive ? 'activated' : 'deactivated'
-					} successfully`
-				),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.INTERNAL_SERVER_ERROR;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotion) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
 		}
+
+		return formatSuccess(
+			res,
+			`Promotion ${
+				promotion.isActive ? 'activated' : 'deactivated'
+			} successfully`,
+			promotion,
+			StatusCodes.OK
+		);
 	});
 
 	getActivePromotions = catchAsync(async (req, res) => {
-		try {
-			const promotions = await PromotionService.getActivePromotions();
+		const promotions = await PromotionService.getActivePromotions();
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Active promotions retrieved successfully'),
-				data: promotions,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotions || promotions.length === 0) {
+			return formatFail(
+				res,
+				'No active promotions found',
+				StatusCodes.NOT_FOUND
+			);
 		}
+
+		return formatSuccess(
+			res,
+			'Active promotions retrieved successfully',
+			promotions,
+			StatusCodes.OK
+		);
 	});
 
 	getPromotionsByProduct = catchAsync(async (req, res) => {
@@ -293,29 +289,30 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Invalid product ID'),
-				errors: errorMessages,
-				success: false,
-			});
-		}
-
-		try {
-			const promotions = await PromotionService.getPromotionsByProduct(
-				value.id
+			return formatFail(
+				res,
+				'Invalid product ID',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
 			);
-
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Product promotions retrieved successfully'),
-				data: promotions,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
 		}
+
+		const promotions = await PromotionService.getPromotionsByProduct(value.id);
+
+		if (!promotions || promotions.length === 0) {
+			return formatFail(
+				res,
+				'No promotions found for this product',
+				StatusCodes.NOT_FOUND
+			);
+		}
+
+		return formatSuccess(
+			res,
+			'Product promotions retrieved successfully',
+			promotions,
+			StatusCodes.OK
+		);
 	});
 
 	addProductsToPromotion = catchAsync(async (req, res) => {
@@ -344,46 +341,41 @@ class PromotionController {
 
 		if (paramsError) {
 			const errorMessages = paramsError.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Invalid promotion ID'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Invalid promotion ID',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
 		if (bodyValidation.error) {
 			const errorMessages = bodyValidation.error.details.map(
 				(err) => err.message
 			);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
-		}
-
-		try {
-			const promotion = await PromotionService.addProductsToPromotion(
-				paramsValue.id,
-				bodyValidation.value.productIds
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
 			);
-
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Products added to promotion successfully'),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.BAD_REQUEST;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
 		}
+
+		const promotion = await PromotionService.addProductsToPromotion(
+			paramsValue.id,
+			bodyValidation.value.productIds
+		);
+
+		if (!promotion) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+		}
+
+		return formatSuccess(
+			res,
+			'Products added to promotion successfully',
+			promotion,
+			StatusCodes.OK
+		);
 	});
 
 	removeProductsFromPromotion = catchAsync(async (req, res) => {
@@ -412,80 +404,79 @@ class PromotionController {
 
 		if (paramsError) {
 			const errorMessages = paramsError.details.map((err) => err.message);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Invalid promotion ID'),
-				errors: errorMessages,
-				success: false,
-			});
+			return formatFail(
+				res,
+				'Invalid promotion ID',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
 		if (bodyValidation.error) {
 			const errorMessages = bodyValidation.error.details.map(
 				(err) => err.message
 			);
-			return res.status(StatusCodes.BAD_REQUEST).json({
-				message: chalk.red('Validation failed'),
-				errors: errorMessages,
-				success: false,
-			});
-		}
-
-		try {
-			const promotion = await PromotionService.removeProductsFromPromotion(
-				paramsValue.id,
-				bodyValidation.value.productIds
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
 			);
-
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Products removed from promotion successfully'),
-				data: promotion,
-				success: true,
-			});
-		} catch (error) {
-			const statusCode =
-				error.message === 'Promotion not found'
-					? StatusCodes.NOT_FOUND
-					: StatusCodes.BAD_REQUEST;
-
-			return res.status(statusCode).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
 		}
+
+		const promotion = await PromotionService.removeProductsFromPromotion(
+			paramsValue.id,
+			bodyValidation.value.productIds
+		);
+
+		if (!promotion) {
+			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+		}
+
+		return formatSuccess(
+			res,
+			'Products removed from promotion successfully',
+			promotion,
+			StatusCodes.OK
+		);
 	});
 
 	getExpiredPromotions = catchAsync(async (req, res) => {
-		try {
-			const promotions = await PromotionService.getExpiredPromotions();
+		const promotions = await PromotionService.getExpiredPromotions();
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Expired promotions retrieved successfully'),
-				data: promotions,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotions || promotions.length === 0) {
+			return formatFail(
+				res,
+				'No expired promotions found',
+				StatusCodes.NOT_FOUND
+			);
 		}
+
+		return formatSuccess(
+			res,
+			'Expired promotions retrieved successfully',
+			promotions,
+			StatusCodes.OK
+		);
 	});
 
 	getUpcomingPromotions = catchAsync(async (req, res) => {
-		try {
-			const promotions = await PromotionService.getUpcomingPromotions();
+		const promotions = await PromotionService.getUpcomingPromotions();
 
-			return res.status(StatusCodes.OK).json({
-				message: chalk.green('Upcoming promotions retrieved successfully'),
-				data: promotions,
-				success: true,
-			});
-		} catch (error) {
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-				message: chalk.red(error.message),
-				success: false,
-			});
+		if (!promotions || promotions.length === 0) {
+			return formatFail(
+				res,
+				'No upcoming promotions found',
+				StatusCodes.NOT_FOUND
+			);
 		}
+
+		return formatSuccess(
+			res,
+			'Upcoming promotions retrieved successfully',
+			promotions,
+			StatusCodes.OK
+		);
 	});
 }
 

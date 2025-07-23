@@ -2,7 +2,11 @@ import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import categoryService from './category.service.js';
 import { ValidationCategory } from './category.validation.js';
-
+import {
+	formatError,
+	formatFail,
+	formatSuccess,
+} from '../../shared/response/responseFormatter.js';
 class CategoryController {
 	constructor() {
 		this.categoryService = categoryService;
@@ -10,8 +14,10 @@ class CategoryController {
 	createCategory = catchAsync(async (req, res) => {
 		const { name, parentId, description } = req.body;
 		if (!name || !parentId || !description) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Name, parentId, and description are required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		let _validationCategory = ValidationCategory.createCategory;
@@ -21,8 +27,11 @@ class CategoryController {
 			description,
 		});
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const newCategory = await this.categoryService.createCategory({
@@ -31,37 +40,50 @@ class CategoryController {
 			description,
 		});
 		if (!newCategory) {
-			return res
-				.status(StatusCodes.BAD_REQUEST)
-				.json({ message: 'Category creation failed!' });
+			return formatError({
+				res,
+				message: 'Category creation failed!',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-		return res.status(StatusCodes.CREATED).json({
-			message: 'Category created successfully',
+		return formatSuccess({
+			res,
 			data: newCategory,
+			message: 'Category created successfully',
+			code: StatusCodes.CREATED,
 		});
 	});
 	deleteCategory = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		if (!id || id === 'undefined') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Category ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		let _validationCategory = ValidationCategory.deleteCategory;
 		const { error } = _validationCategory.validate({ id });
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const deleted = await this.categoryService.deleteCategory(id);
 		if (!deleted) {
-			return res
-				.status(StatusCodes.NOT_FOUND)
-				.json({ message: 'Category not found' });
+			return formatFail({
+				res,
+				message: 'Category not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
 			message: 'Category deleted successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	updateCategory = catchAsync(async (req, res) => {
@@ -69,8 +91,10 @@ class CategoryController {
 		const { name, parentId, description } = req.body;
 
 		if (!id || !name || !parentId || !description) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'ID, name, parentId, and description are required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		let _validationCategory = ValidationCategory.updateCategory;
@@ -81,8 +105,11 @@ class CategoryController {
 			description,
 		});
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 
@@ -92,90 +119,120 @@ class CategoryController {
 			description,
 		});
 		if (!updateCategory) {
-			return res
-				.status(StatusCodes.BAD_REQUEST)
-				.json({ message: 'Category update field !' });
+			return formatError({
+				res,
+				message: 'Category update failed!',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Category updated successfully',
+		return formatSuccess({
+			res,
 			data: updateCategory,
+			message: 'Category updated successfully',
+			code: StatusCodes.OK,
 		});
 	});
 	getAllCategories = catchAsync(async (req, res) => {
 		const categories = await this.categoryService.getAllCategories();
 		if (!categories || categories.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'No categories found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'All categories fetched successfully',
+		return formatSuccess({
+			res,
 			data: categories,
+			message: 'All categories fetched successfully',
+			code: StatusCodes.OK,
 		});
 	});
 
 	getTreeCategories = catchAsync(async (req, res) => {
 		const tree = await this.categoryService.getTreeCategories();
 		if (!tree || tree.length === 0) {
-			return res.status(StatusCodes.NOT_FOUND).json({
+			return formatFail({
+				res,
 				message: 'No tree categories found',
+				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Tree categories fetched successfully',
+		return formatSuccess({
+			res,
 			data: tree,
+			message: 'Tree categories fetched successfully',
+			code: StatusCodes.OK,
 		});
 	});
 
 	getCategoryById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		if (!id || id === 'undefined') {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Category ID is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		let _validationCategory = ValidationCategory.getCategoryById;
 		const { error } = _validationCategory.validate({ id });
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const category = await this.categoryService.getCategoryById(id);
 		if (!category) {
-			return res
-				.status(StatusCodes.NOT_FOUND)
-				.json({ message: 'Category not found' });
+			return formatFail({
+				res,
+				message: 'Category not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Category fetched successfully',
+		return formatSuccess({
+			res,
 			data: category,
+			message: 'Category fetched successfully',
+			code: StatusCodes.OK,
 		});
 	});
 
 	getCategoryBySlug = catchAsync(async (req, res) => {
 		const { slug } = req.params;
 		if (!slug) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: 'Category slug is required!',
+				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 		let _validationCategory = ValidationCategory.getCategoryBySlug;
 		const { error } = _validationCategory.validate({ slug });
 		if (error) {
-			return res.status(StatusCodes.BAD_REQUEST).json({
+			return formatFail({
+				res,
 				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
 			});
 		}
 		const category = await this.categoryService.getCategoryBySlug(slug);
 		if (!category) {
-			return res
-				.status(StatusCodes.NOT_FOUND)
-				.json({ message: 'Category not found' });
+			return formatFail({
+				res,
+				message: 'Category not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
-		return res.status(StatusCodes.OK).json({
-			message: 'Category fetched successfully',
+		return formatSuccess({
+			res,
 			data: category,
+			message: 'Category fetched successfully',
+			code: StatusCodes.OK,
 		});
 	});
 
@@ -188,9 +245,14 @@ class CategoryController {
 			search,
 		});
 
-		return res.status(StatusCodes.OK).json({
+		return formatSuccess({
+			res,
+			data: paginationData.data,
 			message: 'Categories fetched with pagination successfully',
-			...paginationData,
+			code: StatusCodes.OK,
+			meta: {
+				pagination: paginationData.pagination,
+			},
 		});
 	});
 }

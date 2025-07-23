@@ -59,4 +59,10 @@ router.post(
 	checkPermission('roles.view'),
 	AuthController.assignRoleToUser
 );
+router.post(
+	'/roles/:userId/revoke',
+	authMiddleware,
+	checkPermission('roles.view'),
+	AuthController.revokeRoleFromUser
+);
 export default router;
