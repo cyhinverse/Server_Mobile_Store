@@ -9,6 +9,10 @@ import {
 class NotificationController extends BaseController {
 	constructor() {
 		super(notificationService);
+		this.repository = notificationService;
+		if (!NotificationController.instance)
+			return NotificationController.instance;
+		NotificationController.instance = this;
 	}
 
 	// Lấy thông báo của user hiện tại
@@ -22,7 +26,7 @@ class NotificationController extends BaseController {
 			sort: req.query.sort || '-createdAt',
 		};
 
-		const result = await notificationService.getNotificationsByUser(
+		const result = await this.repository.getNotificationsByUser(
 			userId,
 			options
 		);
@@ -38,7 +42,7 @@ class NotificationController extends BaseController {
 	// Đếm thông báo chưa đọc
 	getUnreadCount = catchAsync(async (req, res) => {
 		const userId = req.user.id;
-		const count = await notificationService.getUnreadCount(userId);
+		const count = await this.repository.getUnreadCount(userId);
 
 		return formatSuccess(
 			res,
@@ -50,7 +54,7 @@ class NotificationController extends BaseController {
 
 	// Tạo thông báo mới (Admin only)
 	createNotification = catchAsync(async (req, res) => {
-		const notification = await notificationService.createNotification(req.body);
+		const notification = await this.repository.createNotification(req.body);
 
 		return formatSuccess(
 			res,
@@ -72,7 +76,7 @@ class NotificationController extends BaseController {
 			return formatFail(res, 'Title and content are required', 400);
 		}
 
-		const notifications = await notificationService.createSystemNotification(
+		const notifications = await this.repository.createSystemNotification(
 			userIds,
 			title,
 			content,
@@ -92,7 +96,7 @@ class NotificationController extends BaseController {
 		const { id } = req.params;
 		const userId = req.user.id;
 
-		const notification = await notificationService.markAsRead(id, userId);
+		const notification = await this.repository.markAsRead(id, userId);
 
 		return formatSuccess(res, notification, 'Notification marked as read', 200);
 	});
@@ -101,7 +105,7 @@ class NotificationController extends BaseController {
 	markAllAsRead = catchAsync(async (req, res) => {
 		const userId = req.user.id;
 
-		const result = await notificationService.markAllAsRead(userId);
+		const result = await this.repository.markAllAsRead(userId);
 
 		return formatSuccess(
 			res,
@@ -116,10 +120,7 @@ class NotificationController extends BaseController {
 		const { id } = req.params;
 		const userId = req.user.id;
 
-		const notification = await notificationService.deleteNotification(
-			id,
-			userId
-		);
+		const notification = await this.repository.deleteNotification(id, userId);
 
 		return formatSuccess(
 			res,
@@ -138,10 +139,7 @@ class NotificationController extends BaseController {
 			sort: req.query.sort || '-createdAt',
 		};
 
-		const result = await notificationService.getNotificationsByType(
-			type,
-			options
-		);
+		const result = await this.repository.getNotificationsByType(type, options);
 
 		return formatSuccess(
 			res,
@@ -155,7 +153,7 @@ class NotificationController extends BaseController {
 	getNotificationStats = catchAsync(async (req, res) => {
 		const userId = req.user.id;
 
-		const stats = await notificationService.getNotificationStats(userId);
+		const stats = await this.repository.getNotificationStats(userId);
 
 		return formatSuccess(
 			res,
@@ -167,7 +165,7 @@ class NotificationController extends BaseController {
 
 	// Dọn dẹp thông báo hết hạn (Admin only)
 	cleanupExpiredNotifications = catchAsync(async (req, res) => {
-		const result = await notificationService.cleanupExpiredNotifications();
+		const result = await this.repository.cleanupExpiredNotifications();
 
 		return formatSuccess(
 			res,
@@ -182,7 +180,7 @@ class NotificationController extends BaseController {
 		const { id } = req.params;
 		const userId = req.user.id;
 
-		const notification = await notificationService.findById(id);
+		const notification = await this.repository.findById(id);
 
 		// Kiểm tra quyền truy cập
 		if (notification.user.toString() !== userId) {
@@ -205,7 +203,7 @@ class NotificationController extends BaseController {
 			return formatFail(res, 'Missing required fields', 400);
 		}
 
-		const notification = await notificationService.createOrderNotification(
+		const notification = await this.repository.createOrderNotification(
 			userId,
 			orderId,
 			orderStatus,
@@ -228,7 +226,7 @@ class NotificationController extends BaseController {
 			return formatFail(res, 'Missing required fields', 400);
 		}
 
-		const notification = await notificationService.createPromotionNotification(
+		const notification = await this.repository.createPromotionNotification(
 			userId,
 			promotionId,
 			promotionData

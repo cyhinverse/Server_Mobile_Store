@@ -34,8 +34,8 @@ const notificationSchema = new Schema(
 
 		// Dữ liệu động (tuỳ loại thông báo)
 		metadata: {
-			orderId: { type: Types.ObjectId, ref: 'Order' }, // Cho thông báo đơn hàng
-			promotionId: { type: Types.ObjectId, ref: 'Promotion' }, // Cho khuyến mãi
+			orderId: { type: Types.ObjectId, ref: 'Order' },
+			promotionId: { type: Types.ObjectId, ref: 'Promotion' },
 			deepLink: String, // Link điều hướng trong app
 			icon: String, // Icon hiển thị
 		},

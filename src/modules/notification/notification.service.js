@@ -4,6 +4,7 @@ import { emitCreateNotification } from '../../events/notification.event.js';
 
 class NotificationService extends BaseService {
 	constructor() {
+		super(notificationRepository);
 		this.repository = notificationRepository;
 	}
 

@@ -17,9 +17,18 @@ import {
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
+import BaseController from '../../core/controller/base.controller.js';
 dotenv.config();
 
-class AuthController {
+class AuthController extends BaseController {
+	constructor() {
+		super(AuthService);
+		if (!AuthService) {
+			throw new Error('AuthService is required');
+		}
+		if (!AuthController.instance) return AuthController.instance;
+		AuthController.instance = this;
+	}
 	register = catchAsync(async (req, res) => {
 		const { fullName, dayOfBirth, phoneNumber, email, password } = req.body;
 		if (!fullName || !dayOfBirth || !phoneNumber || !email || !password) {
