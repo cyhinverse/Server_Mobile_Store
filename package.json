@@ -29,7 +29,6 @@
 	"description": "This is a Node.js server for a mobile store application. It provides RESTful APIs for user authentication, product management, and order processing.",
 	"dependencies": {
 		"bcrypt": "^6.0.0",
-		"chalk": "^5.4.1",
 		"cloudinary": "^2.7.0",
 		"compression": "^1.8.0",
 		"cookie-parser": "^1.4.7",
@@ -48,7 +47,8 @@
 		"nodemon": "^3.1.10",
 		"passport": "^0.7.0",
 		"passport-google-oauth20": "^2.0.0",
-		"slugify": "^1.6.6"
+		"slugify": "^1.6.6",
+		"socket.io": "^4.8.1"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.29.0",

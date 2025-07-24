@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../configs/catchAsync.js';
 
-export const checkPermission = (requiredPermission) => {
+const checkPermission = (requiredPermission) => {
 	return catchAsync(async (req, res, next) => {
 		const user = req.user;
 
@@ -20,3 +20,5 @@ export const checkPermission = (requiredPermission) => {
 		next();
 	});
 };
+
+export default checkPermission;

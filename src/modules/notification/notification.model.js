@@ -2,7 +2,7 @@ import { Schema, model, Types } from 'mongoose';
 
 const notificationSchema = new Schema(
 	{
-		user: {
+		user_id: {
 			type: Types.ObjectId,
 			ref: 'User',
 			required: true,

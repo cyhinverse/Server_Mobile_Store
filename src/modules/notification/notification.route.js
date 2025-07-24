@@ -2,13 +2,12 @@ import { Router } from 'express';
 import notificationController from './notification.controller.js';
 import NotificationValidation from './notification.validation.js';
 import { validateData } from '../../middlewares/validation.js';
-import { authenticate } from '../../middlewares/auth.js';
-import { authorize } from '../../middlewares/permission.js';
-
+import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
 const router = Router();
 
 // Middleware xác thực cho tất cả routes
-router.use(authenticate);
+router.use(authMiddleware);
 
 // Routes cho user
 router.get(
@@ -44,28 +43,28 @@ router.delete(
 // Routes cho admin
 router.post(
 	'/',
-	authorize(['admin']),
+	checkPermission(['admin']),
 	validateData(NotificationValidation.createNotification),
 	notificationController.createNotification
 );
 
 router.post(
 	'/system',
-	authorize(['admin']),
+	checkPermission(['admin']),
 	validateData(NotificationValidation.createSystemNotification),
 	notificationController.createSystemNotification
 );
 
 router.get(
 	'/type/:type',
-	authorize(['admin']),
+	checkPermission(['admin']),
 	validateData(NotificationValidation.getNotifications, 'query'),
 	notificationController.getNotificationsByType
 );
 
 router.delete(
 	'/cleanup/expired',
-	authorize(['admin']),
+	checkPermission(['admin']),
 	notificationController.cleanupExpiredNotifications
 );
 

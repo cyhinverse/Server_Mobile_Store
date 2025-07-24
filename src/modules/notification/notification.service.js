@@ -1,27 +1,22 @@
 import BaseService from '../../core/service/base.service.js';
 import notificationRepository from './notification.repository.js';
+import { emitCreateNotification } from '../../events/notification.event.js';
 
 class NotificationService extends BaseService {
 	constructor() {
-		super(notificationRepository);
+		this.repository = notificationRepository;
 	}
 
 	// Lấy thông báo theo user
 	async getNotificationsByUser(userId, options = {}) {
-		try {
-			return await notificationRepository.getNotificationsByUser(
-				userId,
-				options
-			);
-		} catch (error) {
-			throw new Error(error.message);
-		}
+		if (!userId) throw new Error('User ID is required');
+		return await this.repository.getNotificationsByUser(userId, options);
 	}
 
 	// Đếm thông báo chưa đọc
 	async getUnreadCount(userId) {
 		try {
-			return await notificationRepository.getUnreadCount(userId);
+			return await this.repository.getUnreadCount(userId);
 		} catch (error) {
 			throw new Error(error.message);
 		}
@@ -31,7 +26,7 @@ class NotificationService extends BaseService {
 	async createNotification(data) {
 		try {
 			const {
-				user,
+				userId,
 				type,
 				title,
 				content,
@@ -41,12 +36,9 @@ class NotificationService extends BaseService {
 				imageUrl = null,
 			} = data;
 
-			// Validate required fields
-			if (!user || !type || !title || !content) {
+			if (!userId || !type || !title || !content)
 				throw new Error('User, type, title and content are required');
-			}
 
-			// Validate type
 			const validTypes = [
 				'order',
 				'promotion',
@@ -54,18 +46,15 @@ class NotificationService extends BaseService {
 				'account',
 				'delivery',
 			];
-			if (!validTypes.includes(type)) {
+			if (!validTypes.includes(type))
 				throw new Error('Invalid notification type');
-			}
 
-			// Validate priority
 			const validPriorities = ['high', 'medium', 'low'];
-			if (!validPriorities.includes(priority)) {
+			if (!validPriorities.includes(priority))
 				throw new Error('Invalid priority level');
-			}
 
 			const notificationData = {
-				user,
+				user: userId,
 				type,
 				title,
 				content,
@@ -79,7 +68,9 @@ class NotificationService extends BaseService {
 				notificationData.expiresAt = new Date(expiresAt);
 			}
 
-			return await this.repository.create(notificationData);
+			const notification = await this.repository.create(notificationData);
+			await emitCreateNotification(userId, notification);
+			return notification;
 		} catch (error) {
 			throw new Error(error.message);
 		}
@@ -92,40 +83,28 @@ class NotificationService extends BaseService {
 
 			switch (orderStatus) {
 				case 'confirmed':
-					title = {
-						vi: 'Đơn hàng đã được xác nhận',
-						en: 'Order confirmed',
-					};
+					title = { vi: 'Đơn hàng đã được xác nhận', en: 'Order confirmed' };
 					content = {
 						vi: `Đơn hàng #${orderData.orderNumber} của bạn đã được xác nhận và đang được chuẩn bị.`,
 						en: `Your order #${orderData.orderNumber} has been confirmed and is being prepared.`,
 					};
 					break;
 				case 'shipped':
-					title = {
-						vi: 'Đơn hàng đang được giao',
-						en: 'Order shipped',
-					};
+					title = { vi: 'Đơn hàng đang được giao', en: 'Order shipped' };
 					content = {
 						vi: `Đơn hàng #${orderData.orderNumber} đang trên đường giao đến bạn.`,
 						en: `Your order #${orderData.orderNumber} is on the way.`,
 					};
 					break;
 				case 'delivered':
-					title = {
-						vi: 'Đơn hàng đã được giao',
-						en: 'Order delivered',
-					};
+					title = { vi: 'Đơn hàng đã được giao', en: 'Order delivered' };
 					content = {
 						vi: `Đơn hàng #${orderData.orderNumber} đã được giao thành công.`,
 						en: `Your order #${orderData.orderNumber} has been delivered successfully.`,
 					};
 					break;
 				case 'cancelled':
-					title = {
-						vi: 'Đơn hàng đã bị hủy',
-						en: 'Order cancelled',
-					};
+					title = { vi: 'Đơn hàng đã bị hủy', en: 'Order cancelled' };
 					content = {
 						vi: `Đơn hàng #${orderData.orderNumber} đã bị hủy.`,
 						en: `Your order #${orderData.orderNumber} has been cancelled.`,
@@ -136,7 +115,7 @@ class NotificationService extends BaseService {
 			}
 
 			return await this.createNotification({
-				user: userId,
+				userId,
 				type: 'order',
 				title,
 				content,
@@ -166,7 +145,7 @@ class NotificationService extends BaseService {
 			};
 
 			return await this.createNotification({
-				user: userId,
+				userId,
 				type: 'promotion',
 				title,
 				content,
@@ -198,9 +177,7 @@ class NotificationService extends BaseService {
 				priority: 'medium',
 			}));
 
-			return await notificationRepository.createBulkNotifications(
-				notifications
-			);
+			return await this.repository.createBulkNotifications(notifications);
 		} catch (error) {
 			throw new Error(error.message);
 		}
@@ -209,13 +186,12 @@ class NotificationService extends BaseService {
 	// Đánh dấu đã đọc
 	async markAsRead(notificationId, userId) {
 		try {
-			const notification = await notificationRepository.markAsRead(
+			const notification = await this.repository.markAsRead(
 				notificationId,
 				userId
 			);
-			if (!notification) {
+			if (!notification)
 				throw new Error('Notification not found or access denied');
-			}
 			return notification;
 		} catch (error) {
 			throw new Error(error.message);
@@ -225,7 +201,7 @@ class NotificationService extends BaseService {
 	// Đánh dấu tất cả đã đọc
 	async markAllAsRead(userId) {
 		try {
-			return await notificationRepository.markAllAsRead(userId);
+			return await this.repository.markAllAsRead(userId);
 		} catch (error) {
 			throw new Error(error.message);
 		}
@@ -234,13 +210,12 @@ class NotificationService extends BaseService {
 	// Xóa thông báo
 	async deleteNotification(notificationId, userId) {
 		try {
-			const notification = await notificationRepository.softDelete(
+			const notification = await this.repository.softDelete(
 				notificationId,
 				userId
 			);
-			if (!notification) {
+			if (!notification)
 				throw new Error('Notification not found or access denied');
-			}
 			return notification;
 		} catch (error) {
 			throw new Error(error.message);
@@ -250,34 +225,34 @@ class NotificationService extends BaseService {
 	// Lấy thông báo theo type
 	async getNotificationsByType(type, options = {}) {
 		try {
-			return await notificationRepository.getNotificationsByType(type, options);
+			return await this.repository.getNotificationsByType(type, options);
 		} catch (error) {
 			throw new Error(error.message);
 		}
 	}
 
-	// Dọn dẹp thông báo hết hạn (chạy định kỳ)
+	// Dọn dẹp thông báo hết hạn
 	async cleanupExpiredNotifications() {
 		try {
-			return await notificationRepository.deleteExpiredNotifications();
+			return await this.repository.deleteExpiredNotifications();
 		} catch (error) {
 			throw new Error(error.message);
 		}
 	}
 
-	// Lấy thống kê thông báo
+	// Lấy thống kê
 	async getNotificationStats(userId) {
 		try {
 			const [total, unread, read] = await Promise.all([
-				notificationRepository.model.countDocuments({
+				this.repository.model.countDocuments({
 					user: userId,
 					status: { $ne: 'deleted' },
 				}),
-				notificationRepository.model.countDocuments({
+				this.repository.model.countDocuments({
 					user: userId,
 					status: 'unread',
 				}),
-				notificationRepository.model.countDocuments({
+				this.repository.model.countDocuments({
 					user: userId,
 					status: 'read',
 				}),

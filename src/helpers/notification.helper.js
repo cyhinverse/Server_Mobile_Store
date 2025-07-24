@@ -1,34 +1,25 @@
 import notificationService from '../modules/notification/notification.service.js';
 
 /**
- * Helper class để các module khác có thể gửi notification dễ dàng
+ * Helper gửi thông báo cho các module khác
  */
 class NotificationHelper {
-	/**
-	 * Gửi thông báo khi đơn hàng thay đổi trạng thái
-	 */
-	static async sendOrderStatusNotification(
-		userId,
-		orderId,
-		orderStatus,
-		orderData
-	) {
+	// Đơn hàng thay đổi trạng thái
+	static async sendOrderStatus(userId, orderId, status, orderData) {
 		try {
 			return await notificationService.createOrderNotification(
 				userId,
 				orderId,
-				orderStatus,
+				status,
 				orderData
 			);
 		} catch (error) {
-			console.error('Error sending order notification:', error.message);
+			console.error('🔴 Lỗi gửi thông báo đơn hàng:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo khuyến mãi
-	 */
-	static async sendPromotionNotification(userId, promotionId, promotionData) {
+	// Khuyến mãi cho 1 user
+	static async sendPromotion(userId, promotionId, promotionData) {
 		try {
 			return await notificationService.createPromotionNotification(
 				userId,
@@ -36,35 +27,24 @@ class NotificationHelper {
 				promotionData
 			);
 		} catch (error) {
-			console.error('Error sending promotion notification:', error.message);
+			console.error('🔴 Lỗi gửi thông báo khuyến mãi:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo khuyến mãi cho nhiều user
-	 */
-	static async sendPromotionNotificationToUsers(
-		userIds,
-		promotionId,
-		promotionData
-	) {
+	// Khuyến mãi cho nhiều user
+	static async sendPromotionToMany(userIds, promotionId, promotionData) {
 		try {
-			const promises = userIds.map((userId) =>
-				this.sendPromotionNotification(userId, promotionId, promotionData)
+			const tasks = userIds.map((id) =>
+				this.sendPromotion(id, promotionId, promotionData)
 			);
-			return await Promise.allSettled(promises);
+			return await Promise.allSettled(tasks);
 		} catch (error) {
-			console.error(
-				'Error sending bulk promotion notifications:',
-				error.message
-			);
+			console.error('🔴 Lỗi gửi khuyến mãi hàng loạt:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo chào mừng user mới
-	 */
-	static async sendWelcomeNotification(userId, userData) {
+	// Gửi chào mừng
+	static async sendWelcome(userId, userData) {
 		try {
 			const title = {
 				vi: 'Chào mừng bạn đến với Mobile Store!',
@@ -72,12 +52,12 @@ class NotificationHelper {
 			};
 
 			const content = {
-				vi: `Xin chào ${userData.fullName}! Cảm ơn bạn đã đăng ký tài khoản. Hãy khám phá những sản phẩm tuyệt vời của chúng tôi.`,
-				en: `Hello ${userData.fullName}! Thank you for registering. Explore our amazing products.`,
+				vi: `Xin chào ${userData.fullName}! Cảm ơn bạn đã đăng ký tài khoản.`,
+				en: `Hello ${userData.fullName}! Thank you for registering.`,
 			};
 
 			return await notificationService.createNotification({
-				user: userId,
+				userId,
 				type: 'account',
 				title,
 				content,
@@ -88,14 +68,12 @@ class NotificationHelper {
 				priority: 'medium',
 			});
 		} catch (error) {
-			console.error('Error sending welcome notification:', error.message);
+			console.error('🔴 Lỗi gửi thông báo chào mừng:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo xác nhận thanh toán
-	 */
-	static async sendPaymentConfirmationNotification(userId, paymentData) {
+	// Gửi xác nhận thanh toán
+	static async sendPaymentConfirmation(userId, paymentData) {
 		try {
 			const title = {
 				vi: 'Thanh toán thành công',
@@ -103,16 +81,16 @@ class NotificationHelper {
 			};
 
 			const content = {
-				vi: `Thanh toán ${paymentData.amount.toLocaleString(
+				vi: `Bạn đã thanh toán ${paymentData.amount.toLocaleString(
 					'vi-VN'
-				)}đ cho đơn hàng #${paymentData.orderNumber} đã được xử lý thành công.`,
-				en: `Payment of ${paymentData.amount.toLocaleString()}đ for order #${
+				)}đ cho đơn hàng #${paymentData.orderNumber}.`,
+				en: `You've paid ${paymentData.amount.toLocaleString()}đ for order #${
 					paymentData.orderNumber
-				} has been processed successfully.`,
+				}.`,
 			};
 
 			return await notificationService.createNotification({
-				user: userId,
+				userId,
 				type: 'order',
 				title,
 				content,
@@ -124,40 +102,27 @@ class NotificationHelper {
 				priority: 'high',
 			});
 		} catch (error) {
-			console.error(
-				'Error sending payment confirmation notification:',
-				error.message
-			);
+			console.error('🔴 Lỗi gửi xác nhận thanh toán:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo hệ thống tới tất cả user active
-	 */
-	static async sendSystemNotificationToAllUsers(title, content, metadata = {}) {
+	// Gửi thông báo hệ thống
+	static async sendSystemToAll(title, content, metadata = {}) {
 		try {
-			// Cần import User model để lấy danh sách user active
-			// Giả sử có service để lấy active users
-			const activeUserIds = await this.getActiveUserIds();
-
+			const userIds = await this.getActiveUserIds();
 			return await notificationService.createSystemNotification(
-				activeUserIds,
+				userIds,
 				title,
 				content,
 				metadata
 			);
 		} catch (error) {
-			console.error(
-				'Error sending system notification to all users:',
-				error.message
-			);
+			console.error('🔴 Lỗi gửi thông báo hệ thống:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo nhắc nhở giỏ hàng bỏ quên
-	 */
-	static async sendAbandonedCartNotification(userId, cartData) {
+	// Nhắc nhở giỏ hàng bỏ quên
+	static async sendAbandonedCart(userId, cartData) {
 		try {
 			const title = {
 				vi: 'Bạn có sản phẩm đang chờ trong giỏ hàng',
@@ -165,12 +130,12 @@ class NotificationHelper {
 			};
 
 			const content = {
-				vi: `Bạn có ${cartData.itemCount} sản phẩm trong giỏ hàng. Hoàn tất đơn hàng ngay để không bỏ lỡ!`,
-				en: `You have ${cartData.itemCount} items in your cart. Complete your order now!`,
+				vi: `Có ${cartData.itemCount} sản phẩm trong giỏ hàng của bạn.`,
+				en: `You have ${cartData.itemCount} items in your cart.`,
 			};
 
 			return await notificationService.createNotification({
-				user: userId,
+				userId,
 				type: 'system',
 				title,
 				content,
@@ -179,24 +144,15 @@ class NotificationHelper {
 					icon: 'cart',
 				},
 				priority: 'low',
-				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 			});
 		} catch (error) {
-			console.error(
-				'Error sending abandoned cart notification:',
-				error.message
-			);
+			console.error('🔴 Lỗi nhắc giỏ hàng:', error);
 		}
 	}
 
-	/**
-	 * Gửi thông báo sản phẩm yêu thích có khuyến mãi
-	 */
-	static async sendWishlistPromotionNotification(
-		userId,
-		productData,
-		promotionData
-	) {
+	// Gửi thông báo sản phẩm yêu thích có khuyến mãi
+	static async sendWishlistPromo(userId, productData, promotionData) {
 		try {
 			const title = {
 				vi: 'Sản phẩm yêu thích của bạn đang giảm giá!',
@@ -204,12 +160,12 @@ class NotificationHelper {
 			};
 
 			const content = {
-				vi: `${productData.name} đang giảm ${promotionData.discountValue}%. Mua ngay kẻo lỡ!`,
-				en: `${productData.name} is ${promotionData.discountValue}% off. Buy now!`,
+				vi: `${productData.name} đang giảm ${promotionData.discountValue}%.`,
+				en: `${productData.name} is ${promotionData.discountValue}% off.`,
 			};
 
 			return await notificationService.createNotification({
-				user: userId,
+				userId,
 				type: 'promotion',
 				title,
 				content,
@@ -223,24 +179,17 @@ class NotificationHelper {
 				expiresAt: promotionData.endDate,
 			});
 		} catch (error) {
-			console.error(
-				'Error sending wishlist promotion notification:',
-				error.message
-			);
+			console.error('🔴 Lỗi wishlist promotion:', error);
 		}
 	}
 
-	/**
-	 * Helper method để lấy danh sách active user IDs
-	 * Cần implement dựa trên User model của project
-	 */
+	// Giả lập: lấy user active
 	static async getActiveUserIds() {
 		try {
-			// This would need to be implemented based on your User model
-			// Return array of active user IDs
-			return [];
+			// TODO: Replace bằng UserService.getAllActiveIds()
+			return []; // tạm thời
 		} catch (error) {
-			console.error('Error getting active user IDs:', error.message);
+			console.error('🔴 Lỗi lấy danh sách user:', error);
 			return [];
 		}
 	}

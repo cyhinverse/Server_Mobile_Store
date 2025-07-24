@@ -1,5 +1,4 @@
 import { catchAsync } from '../../configs/catchAsync.js';
-import chalk from 'chalk';
 import { StatusCodes } from 'http-status-codes';
 import joi from 'joi';
 import PromotionService from './promotion.service.js';

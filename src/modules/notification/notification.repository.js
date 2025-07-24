@@ -6,7 +6,6 @@ class NotificationRepository extends BaseRepository {
 		super(Notification);
 	}
 
-	// Lấy thông báo theo user với phân trang
 	async getNotificationsByUser(userId, options = {}) {
 		try {
 			const {
