@@ -1,3 +1,5 @@
+import jwt from 'jsonwebtoken';
+
 export const Token = {
 	generateRefreshToken: (payload) => {
 		return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {

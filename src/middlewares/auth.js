@@ -3,7 +3,9 @@ import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../configs/catchAsync.js';
 
 const authMiddleware = catchAsync(async (req, res, next) => {
-	const token = req.cookies.accessToken;
+	const token =
+		req.cookies?.accessToken ||
+		req.headers?.authorization?.replace('Bearer ', '');
 
 	if (!token) {
 		return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -13,7 +15,16 @@ const authMiddleware = catchAsync(async (req, res, next) => {
 
 	try {
 		const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-		req.user = decoded;
+
+		// Gán payload vào req.user
+		req.user = {
+			_id: decoded._id || decoded.id, // chấp nhận cả id hoặc _id
+			email: decoded.email,
+			name: decoded.name,
+			roles: decoded.roles,
+			permissions: decoded.permissions,
+		};
+
 		next();
 	} catch (error) {
 		return res.status(StatusCodes.UNAUTHORIZED).json({

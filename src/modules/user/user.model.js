@@ -1,7 +1,7 @@
 import { Schema, model, Types } from 'mongoose';
 
 const addressSchema = new Schema({
-	user: { type: Types.ObjectId, ref: 'User', required: true },
+	user: { type: Types.ObjectId, ref: 'User' },
 	fullName: { type: String, required: true },
 	phoneNumber: { type: String, required: true },
 	province: { type: String, required: true },
@@ -15,9 +15,9 @@ const addressSchema = new Schema({
 const userSchema = new Schema(
 	{
 		fullName: { type: String, required: true, trim: true },
-		dayOfBirth: { type: Date, required: true },
+		dayOfBirth: { type: Date },
 		email: { type: String, required: true, unique: true },
-		phoneNumber: { type: String, required: true, unique: true },
+		phoneNumber: { type: String, unique: true },
 		password: { type: String, required: true },
 		isStudent: { type: Boolean, default: false },
 		isTeacher: { type: Boolean, default: false },

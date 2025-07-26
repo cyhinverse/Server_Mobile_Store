@@ -7,30 +7,42 @@ import {
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
+import BaseService from '../../core/service/base.service.js';
+import { comparePassword, hashPassword } from '../../utils/password.util.js';
+import { Token } from '../../utils/token.js';
 
-class UserController {
+class UserController extends BaseService {
 	createUser = catchAsync(async (req, res) => {
 		const { fullName, email, password, roles } = req.body;
+		console.log('req.body', req.body);
 
-		// Validate input data
 		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(res, 'User data is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User data is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		if (!fullName || !email || !password || !roles) {
-			return formatFail(
+			return formatFail({
 				res,
-				'All fields are required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'All fields are required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const { error } = UserValidation.createUserValidation.validate(req.body);
+
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const hashedPassword = await UserService.hashPassword(password);
+		const hashedPassword = await hashPassword(password);
 		const userData = {
 			fullName,
 			email,
@@ -40,98 +52,125 @@ class UserController {
 
 		const newUser = await UserService.createUser(userData);
 		if (!newUser) {
-			return formatError(
+			return formatError({
 				res,
-				'Failed to create user',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: 'Failed to create user',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'User created successfully',
-			{ user: newUser },
-			StatusCodes.CREATED
-		);
+			message: 'User created successfully',
+			data: { user: newUser },
+			code: StatusCodes.CREATED,
+		});
 	});
 	updateUser = catchAsync(async (req, res) => {
 		const { id } = req.params;
-		const dataUser = req.body;
+		const { dataUser } = req.body;
 
-		// Validate input data
 		if (!id) {
-			return formatFail(res, 'User ID is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Update data is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Update data is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const updatedData = await UserService.updateUser(id, dataUser);
 		if (!updatedData) {
-			return formatFail(res, 'User not found', StatusCodes.NOT_FOUND);
+			return formatFail({
+				res,
+				message: 'User not found or update failed',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'User updated successfully',
-			{ user: updatedData },
-			StatusCodes.OK
-		);
+			message: 'User updated successfully',
+			data: { user: updatedData },
+			code: StatusCodes.OK,
+		});
 	});
 	deleteUser = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
 		// Validate input data
 		if (!id) {
-			return formatFail(res, 'User ID is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const user = await UserService.getUserById(id);
+		const user = await UserService.findById(id);
 		if (!user) {
-			return formatFail(res, 'User not found', StatusCodes.NOT_FOUND);
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
 		await UserService.deleteUser(id);
 
-		return formatSuccess(res, 'User deleted successfully', {}, StatusCodes.OK);
+		return formatSuccess({
+			res,
+			message: 'User deleted successfully',
+			code: StatusCodes.OK,
+		});
 	});
 	getUserById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
 		// Validate input data
 		if (!id) {
-			return formatFail(res, 'User ID is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const user = await UserService.getUserById(id);
+		const user = await UserService.findById(id);
 		if (!user) {
-			return formatFail(res, 'User not found', StatusCodes.NOT_FOUND);
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'User found successfully',
-			{ user },
-			StatusCodes.OK
-		);
+			message: 'User found successfully',
+			data: { user },
+			code: StatusCodes.OK,
+		});
 	});
 	getAllUser = catchAsync(async (req, res) => {
-		const users = await UserService.getAllUser();
+		const users = await UserService.findAll();
 		if (!users || users.length === 0) {
 			return formatFail(res, 'No users found', StatusCodes.NOT_FOUND);
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Users found successfully',
-			{ users },
-			StatusCodes.OK
-		);
+			message: 'Users found successfully',
+			data: { users },
+			code: StatusCodes.OK,
+		});
 	});
 	changePassword = catchAsync(async (req, res) => {
 		const { id } = req.params;
@@ -139,85 +178,114 @@ class UserController {
 
 		// Validate input data
 		if (!id) {
-			return formatFail(res, 'User ID is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		if (!password || !newPassword) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Current password and new password are required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Current password and new password are required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const user = await UserService.getUserById(id);
+		const user = await UserService.findById(id);
 		if (!user) {
-			return formatFail(res, 'User not found', StatusCodes.NOT_FOUND);
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		const isPasswordValid = await UserService.comparePassword(
-			password,
-			user.password
-		);
+		const isPasswordValid = await comparePassword(password, user.password);
 		if (!isPasswordValid) {
-			return formatFail(res, 'Invalid password', StatusCodes.UNAUTHORIZED);
+			return formatFail({
+				res,
+				message: 'Invalid password',
+				code: StatusCodes.UNAUTHORIZED,
+			});
 		}
 
-		const hashedPassword = await UserService.hashPassword(newPassword);
+		const hashedPassword = await hashPassword(newPassword);
+		if (!hashedPassword) {
+			return formatError({
+				res,
+				message: 'Failed to hash new password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 		const updatedUser = await UserService.updateUser(id, {
 			password: hashedPassword,
 		});
 		if (!updatedUser) {
-			return formatError(
+			return formatError({
 				res,
-				'Failed to change password',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: 'Failed to change password',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Password changed successfully',
-			{},
-			StatusCodes.OK
-		);
+			message: 'Password changed successfully',
+			data: {},
+			code: StatusCodes.OK,
+		});
 	});
 	ResetPassword = catchAsync(async (req, res) => {
 		const { email } = req.body;
 
 		// Validate input data
 		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(res, 'Email is required', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'Email is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		if (!email) {
-			return formatFail(res, 'Email is required', StatusCodes.BAD_REQUEST);
-		}
-
-		const user = await UserService.getUserById(email);
-		if (user === null || !user) {
-			return formatFail(res, 'User not found', StatusCodes.NOT_FOUND);
-		}
-
-		const resetToken = await UserService.generateResetToken(user);
-		if (!resetToken || resetToken === 'undefined') {
-			return formatError(
+			return formatFail({
 				res,
-				'Failed to generate reset token',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: 'Email is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		return formatSuccess(
+		const user = await UserService.findEmail(email);
+		if (!user) {
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		const resetToken = await Token.generateResetToken(user);
+		if (!resetToken || resetToken === 'undefined') {
+			return formatError({
+				res,
+				message: 'Failed to generate reset token',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+
+		return formatSuccess({
 			res,
-			'Reset token generated successfully',
-			{ resetToken },
-			StatusCodes.OK
-		);
+			message: 'Reset token generated successfully',
+			data: { resetToken },
+			code: StatusCodes.OK,
+		});
 	});
 	createAddress = catchAsync(async (req, res) => {
+		const { _id } = req.user;
+
 		const {
-			user,
 			fullName,
 			phoneNumber,
 			province,
@@ -230,15 +298,14 @@ class UserController {
 
 		// Validate input data
 		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Address data is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Address data is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		if (
-			!user ||
 			!fullName ||
 			!phoneNumber ||
 			!province ||
@@ -246,16 +313,16 @@ class UserController {
 			!ward ||
 			!street
 		) {
-			return formatFail(
+			return formatFail({
 				res,
-				'All required fields must be provided!',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'All required fields must be provided!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const validationAddress = UserValidation.createAddress;
 		const { error } = validationAddress.validate({
-			user,
+			user: _id,
 			fullName,
 			phoneNumber,
 			province,
@@ -267,11 +334,14 @@ class UserController {
 		});
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const newAddress = await UserService.createAddress({
-			user,
+		const newAddress = await UserService.addAddress(_id, {
 			fullName,
 			phoneNumber,
 			province,
@@ -283,54 +353,69 @@ class UserController {
 		});
 
 		if (!newAddress) {
-			return formatError(
+			return formatError({
 				res,
-				'Failed to create address',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: 'Failed to create address',
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Address created successfully',
-			{ data: newAddress },
-			StatusCodes.CREATED
-		);
+			message: 'Address created successfully',
+			data: { address: newAddress },
+			code: StatusCodes.CREATED,
+		});
 	});
 	deleteAddress = catchAsync(async (req, res) => {
-		const { id } = req.params;
+		const userId = req.user._id;
+		const { idAddre } = req.body;
 
-		// Validate input data
-		if (!id || id === 'undefined') {
-			return formatFail(
+		if (!idAddre || idAddre === 'undefined') {
+			return formatFail({
 				res,
-				'Address ID is required!',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Address ID is required!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const validationAddress = UserValidation.deleteAddress;
-		const { error } = validationAddress.validate({ id });
+		// Validate dữ liệu
+		const { error } = UserValidation.deleteAddress.validate({
+			_id: userId,
+			idAddre,
+		});
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const deleted = await UserService.deleteAddress(id);
-		if (!deleted) {
-			return formatFail(res, 'Address not found', StatusCodes.NOT_FOUND);
+		// Gọi service
+		const deletedAddress = await UserService.deleteAddress(userId, idAddre);
+
+		if (!deletedAddress) {
+			return formatFail({
+				res,
+				message: 'Address not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Address deleted successfully',
-			{ data: deleted },
-			StatusCodes.OK
-		);
+			message: 'Address deleted successfully',
+			data: { address: deletedAddress },
+			code: StatusCodes.OK,
+		});
 	});
+
 	updateAddress = catchAsync(async (req, res) => {
-		const { id } = req.params;
+		const userId = req.user._id;
 		const {
+			idAddre,
 			fullName,
 			phoneNumber,
 			province,
@@ -385,7 +470,11 @@ class UserController {
 		if (isDefault !== undefined) updateData.isDefault = isDefault;
 		if (note !== undefined) updateData.note = note;
 
-		const updatedAddress = await UserService.updateAddress(id, updateData);
+		const updatedAddress = await UserService.updateAddress(
+			userId,
+			idAddre,
+			updateData
+		);
 		if (!updatedAddress) {
 			return formatFail(
 				res,

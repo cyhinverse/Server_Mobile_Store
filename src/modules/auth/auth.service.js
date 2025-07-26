@@ -1,8 +1,10 @@
 import dotenv from 'dotenv';
 import AuthRepository from './auth.repository.js';
+import BaseService from '../../core/service/base.service.js';
 dotenv.config();
-class AuthService {
+class AuthService extends BaseService {
 	constructor() {
+		super(AuthRepository);
 		this.authRepo = AuthRepository;
 	}
 	async verifyEmailCode(code) {
@@ -50,6 +52,41 @@ class AuthService {
 			throw new Error('User ID and role are required');
 		}
 		return this.authRepo.updateRoleForUser(userId, role);
+	}
+	async create(userData) {
+		if (!userData) {
+			throw new Error('User data is required for creation');
+		}
+		return this.authRepo.create(userData);
+	}
+	async checkUserExists(email) {
+		if (!email) {
+			throw new Error('Email is required');
+		}
+		return this.authRepo.findOne({ email });
+	}
+	async checkComparePassword(userId, password) {
+		if (!userId || !password) {
+			throw new Error('User ID and password are required');
+		}
+		return this.authRepo.checkComparePassword(userId, password);
+	}
+	async hashPassword(password) {
+		if (!password) {
+			throw new Error('Password is required');
+		}
+		return this.authRepo.hashPassword(password);
+	}
+	async updatePasswordForUser(userId, newPassword) {
+		if (!userId || !newPassword)
+			throw new Error('User ID and new password are required');
+		return this.authRepo.updatePasswordForUser(userId, newPassword);
+	}
+	async updateUser(userId, updateData) {
+		if (!userId || !updateData) {
+			throw new Error('User ID and update data are required');
+		}
+		return this.authRepo.updateUser(userId, updateData);
 	}
 }
 

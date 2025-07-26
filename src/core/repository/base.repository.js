@@ -1,4 +1,5 @@
 'use strict';
+import bcrypt from 'bcrypt';
 class BaseRepository {
 	constructor(model) {
 		if (!model) {
@@ -27,12 +28,20 @@ class BaseRepository {
 	}
 	async update(id, data) {
 		try {
-			const updatedData = await this.model.findByIdAndUpdate(id, data, {
-				new: true,
-			});
+			if (!id || !data || typeof data !== 'object') {
+				throw new Error('Invalid ID or data for update');
+			}
+
+			const updatedData = await this.model.findByIdAndUpdate(
+				id,
+				{ $set: data },
+				{ new: true }
+			);
+
 			if (!updatedData) {
 				throw new Error('Data not found for update');
 			}
+
 			return updatedData;
 		} catch (error) {
 			throw new Error('Error updating data: ' + error.message);
@@ -77,6 +86,35 @@ class BaseRepository {
 			return data;
 		} catch (error) {
 			throw new Error('Error finding data: ' + error.message);
+		}
+	}
+	async deleteOne(query) {
+		try {
+			const deletedData = await this.model.deleteOne(query);
+			if (deletedData.deletedCount === 0) {
+				throw new Error('No data found for deletion');
+			}
+			return deletedData;
+		} catch (error) {
+			throw new Error('Error deleting data: ' + error.message);
+		}
+	}
+	async hashPassword(password) {
+		const salt = await bcrypt.genSalt(10);
+		return await bcrypt.hash(password, salt);
+	}
+	async comparePassword(password, hash) {
+		return await bcrypt.compare(password, hash);
+	}
+	async findEmail(email) {
+		try {
+			const user = await this.model.findOne({ email });
+			if (!user) {
+				throw new Error('User not found');
+			}
+			return user;
+		} catch (error) {
+			throw new Error('Error finding user by email: ' + error.message);
 		}
 	}
 }

@@ -5,7 +5,7 @@ const UserValidation = {
 		fullName: joi.string().required().trim(),
 		email: joi.string().email().required(),
 		password: joi.string().min(6).required(),
-		roles: joi.array().items(joi.string()).required(),
+		roles: joi.string().valid('user', 'admin').optional(),
 	}),
 	createAddress: joi.object({
 		user: joi.string().required().messages({
@@ -48,14 +48,16 @@ const UserValidation = {
 			'string.base': 'Note must be a valid string',
 		}),
 	}),
-
 	deleteAddress: joi.object({
-		id: joi.string().required().messages({
+		_id: joi.string().required().messages({
+			'string.empty': 'Address ID is required',
+			'any.required': 'Address ID is required',
+		}),
+		idAddre: joi.string().required().messages({
 			'string.empty': 'Address ID is required',
 			'any.required': 'Address ID is required',
 		}),
 	}),
-
 	updateAddress: joi.object({
 		id: joi.string().required().messages({
 			'string.empty': 'Address ID is required',
@@ -90,21 +92,18 @@ const UserValidation = {
 			'string.base': 'Note must be a valid string',
 		}),
 	}),
-
 	getAddressById: joi.object({
 		id: joi.string().required().messages({
 			'string.empty': 'Address ID is required',
 			'any.required': 'Address ID is required',
 		}),
 	}),
-
 	getAddressesByUser: joi.object({
 		userId: joi.string().required().messages({
 			'string.empty': 'User ID is required',
 			'any.required': 'User ID is required',
 		}),
 	}),
-
 	setDefaultAddress: joi.object({
 		id: joi.string().required().messages({
 			'string.empty': 'Address ID is required',
@@ -115,7 +114,6 @@ const UserValidation = {
 			'any.required': 'User ID is required',
 		}),
 	}),
-
 	getAddressesPaginated: joi.object({
 		page: joi.number().integer().min(1).optional().messages({
 			'number.base': 'Page must be a number',

@@ -1,56 +1,51 @@
 import { Types } from 'mongoose';
-import User from './user.model.js';
-import bcrypt from 'bcrypt';
-
-class UserService {
-	static async checkUserExists(email) {
-		if (!email) throw new Error('Email is required');
-		return await User.findOne({ email }).lean();
+import BaseService from '../../core/service/base.service.js';
+import UserRepository from './user.repository.js';
+class UserService extends BaseService {
+	constructor() {
+		super(UserRepository);
+		if (UserService.instance) return UserService.instance;
+		UserService.instance = this;
+		this.userRepo = UserRepository;
 	}
-	static async updatePasswordForUser(userId, newPassword) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		const hashedPassword = await UserService.hashPassword(newPassword);
-		return await User.findByIdAndUpdate(
-			userId,
-			{ password: hashedPassword },
-			{ new: true }
-		);
-	}
-
-	static async createUser(userData) {
-		if (!userData?.email || !userData?.phoneNumber) {
-			throw new Error('Email and phone number are required');
+	async createUser(data) {
+		if (!data || Object.keys(data).length === 0) {
+			throw new Error('User data is required');
 		}
-		return await User.create(userData);
-	}
+		const { fullName, email, password, roles } = data;
+		if (!fullName || !email || !password) {
+			throw new Error('Full name, email, and password are required');
+		}
+		const existingUser = await this.userRepo.findOne({ email });
+		if (existingUser) {
+			throw new Error('Email already exists');
+		}
 
-	static async hashPassword(password) {
-		if (!password) throw new Error('Password is required');
-		return await bcrypt.hash(password, 10);
+		const newUser = {
+			fullName,
+			email,
+			password,
+			roles: roles || 'user',
+		};
+		const createdUser = await this.userRepo.create(newUser);
+		return createdUser;
 	}
-
-	static async comparePassword(password, hashedPassword) {
-		if (!password || !hashedPassword)
-			throw new Error('Both passwords are required');
-		return await bcrypt.compare(password, hashedPassword);
-	}
-
-	static async getUserById(userId) {
+	async updateUser(userId, dataUser) {
 		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		return await User.findById(userId);
+		const user = await this.userRepo.findById(userId);
+
+		if (!user) throw new Error('User not found');
+		const updatedUser = await this.userRepo.update(userId, dataUser);
+		return updatedUser;
 	}
-
-	static async updateUser(userId, updateData) {
+	async deleteUser(userId) {
 		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		return await User.findByIdAndUpdate(userId, updateData, {
-			new: true,
-			runValidators: true,
-		}).lean();
+		const user = await this.userRepo.findById(userId);
+		if (!user) throw new Error('User not found');
+		return await this.userRepo.deleteOne({ _id: userId });
 	}
-
-	static async addAddress(userId, addressData) {
+	async addAddress(userId, addressData) {
 		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-
 		const requiredFields = [
 			'fullName',
 			'phoneNumber',
@@ -60,123 +55,122 @@ class UserService {
 			'street',
 		];
 		const missingFields = requiredFields.filter((field) => !addressData[field]);
-
 		if (missingFields.length > 0) {
 			throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
 		}
 
-		const user = await User.findById(userId);
+		const user = await this.userRepo.findById(userId);
 		if (!user) throw new Error('User not found');
 
 		if (addressData.isDefault) {
-			user.addresses.forEach((addr) => {
-				addr.isDefault = false;
-			});
+			user.address.forEach((addr) => (addr.isDefault = false));
+		} else {
+			const defaultAddress = user.address.find((addr) => addr.isDefault);
+			if (!defaultAddress) {
+				addressData.isDefault = true;
+			}
 		}
 
 		const newAddress = {
 			...addressData,
+			user: userId,
 			_id: new Types.ObjectId(),
-			isDefault: addressData.isDefault || user.addresses.length === 0,
+			isDefault: addressData.isDefault,
 			createdAt: new Date(),
 		};
 
-		user.addresses.push(newAddress);
-		await user.save();
+		user.address.push(newAddress);
+		await this.userRepo.save(user);
 		return newAddress;
 	}
-
-	static async getAddresses(userId) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		const user = await User.findById(userId).select('addresses').lean();
+	async getAddresses(userId) {
+		const user = await this.userRepo.getAddressesByUserId(userId);
 		if (!user) throw new Error('User not found');
 
-		return user.addresses.sort(
+		return user.address.sort(
 			(a, b) => b.isDefault - a.isDefault || b.createdAt - a.createdAt
 		);
 	}
+	async getAddressById(userId, addressId) {
+		const user = await this.userRepo.getAddressById(userId, addressId);
+		if (!user?.address?.length) throw new Error('Address not found');
 
-	static async getAddressById(userId, addressId) {
-		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
-			throw new Error('Invalid IDs');
-		}
-
-		const user = await User.findOne(
-			{ _id: userId, 'addresses._id': addressId },
-			{ 'addresses.$': 1 }
-		).lean();
-
-		if (!user?.addresses?.length) throw new Error('Address not found');
-		return user.addresses[0];
+		return user.address[0];
 	}
-
-	static async updateAddress(userId, addressId, updateData) {
+	async updateAddress(userId, addressId, updateData) {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
 
-		const user = await User.findById(userId);
+		const user = await this.userRepo.findById(userId);
 		if (!user) throw new Error('User not found');
 
-		const address = user.addresses.id(addressId);
+		const address = user.address.find((addr) => addr._id.equals(addressId));
 		if (!address) throw new Error('Address not found');
 
 		if (updateData.isDefault) {
-			user.addresses.forEach((addr) => {
+			user.address.forEach((addr) => {
 				addr.isDefault = addr._id.equals(addressId);
 			});
 		}
 
 		Object.assign(address, updateData);
-		await user.save();
+		await this.userRepo.save(user);
 		return address;
 	}
-
-	static async deleteAddress(userId, addressId) {
+	async deleteAddress(userId, addressId) {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
 
-		const user = await User.findById(userId);
+		const user = await this.userRepo.findById(userId);
 		if (!user) throw new Error('User not found');
 
-		const address = user.addresses.id(addressId);
+		const address = user.address.find((addr) => addr._id.equals(addressId));
 		if (!address) throw new Error('Address not found');
 
-		if (address.isDefault && user.addresses.length > 1) {
-			const newDefault = user.addresses.find((a) => !a._id.equals(addressId));
+		if (address.isDefault && user.address.length > 1) {
+			const newDefault = user.address.find((a) => !a._id.equals(addressId));
 			if (newDefault) newDefault.isDefault = true;
 		}
 
 		user.address.pull(addressId);
-		await user.save();
+		await this.userRepo.save(user);
 		return address;
 	}
-
-	static async setDefaultAddress(userId, addressId) {
+	async setDefaultAddress(userId, addressId) {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
 
-		const user = await User.findById(userId);
+		const user = await this.userRepo.findById(userId);
 		if (!user) throw new Error('User not found');
 
-		const address = user.address.id(addressId);
+		const address = user.address.find(
+			(addr) => addr._id.toString() === addressId.toString()
+		);
 		if (!address) throw new Error('Address not found');
 
-		user.addresses.forEach((addr) => {
-			addr.isDefault = addr._id.equals(addressId);
+		user.address.forEach((addr) => {
+			addr.isDefault = addr._id.toString() === addressId.toString();
 		});
 
-		await user.save();
+		await this.userRepo.save(user);
 		return address;
 	}
-	static async getUserByEmail(email) {
+	async hashPassword(password) {
+		if (!password) throw new Error('Password is required');
+		return await this.userRepo.hashPassword(password);
+	}
+	async comparePassword(password, hash) {
+		return await this.userRepo.comparePassword(password, hash);
+	}
+	async findEmail(email) {
 		if (!email) throw new Error('Email is required');
-		return await User.findOne({
-			email,
-		});
+		const user = await this.userRepo.findOne({ email });
+		if (!user) throw new Error('User not found');
+		return user;
 	}
 }
 
-export default UserService;
+export default new UserService();

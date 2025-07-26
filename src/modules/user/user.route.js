@@ -1,47 +1,46 @@
 import express from 'express';
 import UserController from './user.controller.js';
-
+import authMiddleware from '../../middlewares/auth.js';
 const router = express.Router();
 
-router.post('/users', UserController.createUser);
-router.get('/users/:id', UserController.getUserById);
-router.patch('/users/:id', UserController.updateUser);
-router.delete('/users/:id', UserController.deleteUser);
+router.use(authMiddleware);
 
-router.post('/users/:userId/addresses', UserController.createAddress);
+router.post('/', UserController.createUser);
+router.get('/:id', UserController.getUserById);
+router.patch('/:id', UserController.updateUser);
+router.delete('/:id', UserController.deleteUser);
+router.get('/', UserController.getAllUser);
+router.post('/:id/change-password', UserController.changePassword);
+router.post('/:id/reset-password', UserController.ResetPassword);
 
-router.delete(
-	'/users/:userId/addresses/:addressId',
-	UserController.deleteAddress
-);
+router.post('/addresses', UserController.createAddress);
 
-router.put('/users/:userId/addresses/:addressId', UserController.updateAddress);
+router.delete('/addresses/delete', UserController.deleteAddress);
+
+router.put('/addresses/update', UserController.updateAddress);
 
 router.patch(
-	'/users/:userId/addresses/:addressId/set-default',
+	'/:userId/addresses/:addressId/set-default',
 	UserController.setDefaultAddress
 );
 
-router.get('/users/:userId/addresses', UserController.getAddressesByUser);
+router.get('/:userId/addresses', UserController.getAddressesByUser);
 
 router.get(
-	'/users/:userId/addresses/default',
+	'/:userId/addresses/default',
 	UserController.getDefaultAddressByUser
 );
 
-router.get(
-	'/users/:userId/addresses/:addressId',
-	UserController.getAddressById
-);
+router.get('/:userId/addresses/:addressId', UserController.getAddressById);
 
-router.get('/admin/users', UserController.getAllUser);
+router.get('/admin', UserController.getAllUser);
 
 router.get('/admin/addresses', UserController.getAllAddresses);
 
 router.get('/admin/addresses/paginated', UserController.getAddressesPaginated);
 
 router.get(
-	'/admin/users/:userId/addresses/count',
+	'/admin/:userId/addresses/count',
 	UserController.getAddressesCountByUser
 );
 

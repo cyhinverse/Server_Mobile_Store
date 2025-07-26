@@ -1,7 +1,6 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import AuthValidation from './auth.validation.js';
 import { StatusCodes } from 'http-status-codes';
-import UserService from '../user/user.service.js';
 import GoogleStrategy from 'passport-google-oauth20';
 GoogleStrategy.Strategy;
 import jwt from 'jsonwebtoken';
@@ -18,6 +17,7 @@ import {
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
 import BaseController from '../../core/controller/base.controller.js';
+import { comparePassword } from '../../utils/password.util.js';
 dotenv.config();
 
 class AuthController extends BaseController {
@@ -78,7 +78,7 @@ class AuthController extends BaseController {
 			password: hashedPassword,
 		};
 
-		const newUser = await UserService.createUser(userData);
+		const newUser = await AuthService.create(userData);
 
 		if (!newUser) {
 			return formatError({
@@ -127,7 +127,7 @@ class AuthController extends BaseController {
 			});
 		}
 
-		const user = await UserService.checkUserExists(email);
+		const user = await AuthService.checkUserExists(email);
 		if (!user) {
 			return formatFail({
 				res,
@@ -135,10 +135,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		const isPasswordValid = await UserService.comparePassword(
-			password,
-			user.password
-		);
+		const isPasswordValid = await comparePassword(password, user.password);
 		if (!isPasswordValid) {
 			return formatFail({
 				res,
@@ -148,15 +145,15 @@ class AuthController extends BaseController {
 		}
 
 		const payload = {
-			id: user._id,
+			_id: user._id,
 			email: user.email,
 			name: user.fullName,
 			roles: user.roles,
 			permissions: user.permissions,
 		};
 
-		const accessToken = await Token.generateAccessToken(payload);
-		const refreshToken = await Token.generateRefreshToken(payload);
+		const accessToken = Token.generateAccessToken(payload);
+		const refreshToken = Token.generateRefreshToken(payload);
 
 		if (!accessToken || !refreshToken) {
 			return formatError({
@@ -174,8 +171,11 @@ class AuthController extends BaseController {
 		res.cookie('accessToken', accessToken, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === 'production',
+			sameSite: 'strict', // ngăn CSRF
+			path: '/',
 			maxAge: 60 * 60 * 1000,
 		});
+
 		return formatSuccess({
 			res,
 			data: {
@@ -239,7 +239,7 @@ class AuthController extends BaseController {
 				errors: error.details.map((err) => err.message),
 			});
 		}
-		const user = await UserService.checkUserExists(email);
+		const user = await AuthService.checkUserExists(email);
 		if (!user) {
 			return formatFail({
 				res,
@@ -339,7 +339,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
-		const user = await UserService.getUserById(decoded.id);
+		const user = await AuthService.findById(decoded.id);
 		if (!user || user === null) {
 			return formatFail({
 				res,
@@ -347,7 +347,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.NOT_FOUND,
 			});
 		}
-		const hashedPassword = await UserService.hashPassword(newPassword);
+		const hashedPassword = await AuthService.hashPassword(newPassword);
 		if (!hashedPassword) {
 			return formatError({
 				res,
@@ -355,7 +355,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		const updatedUser = await UserService.updatePasswordForUser(
+		const updatedUser = await AuthService.updatePasswordForUser(
 			user._id,
 			hashedPassword
 		);
@@ -405,7 +405,7 @@ class AuthController extends BaseController {
 		}
 
 		// Check if user exists
-		const user = await UserService.getUserByEmail(email);
+		const user = await AuthService.checkUserExists(email);
 
 		if (!user) {
 			return formatFail({
@@ -453,7 +453,6 @@ class AuthController extends BaseController {
 				</div>
 			`,
 		});
-		console.log(`check info`, infoEmail);
 		if (!infoEmail || infoEmail.rejected.length > 0) {
 			return formatError({
 				res,
@@ -485,7 +484,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
-		const user = await UserService.getUserById(verify.id);
+		const user = await AuthService.findById(verify.id);
 		if (!user || user === null) {
 			return formatFail({
 				res,
@@ -551,7 +550,7 @@ class AuthController extends BaseController {
 			});
 		}
 
-		const user = await UserService.getUserById(userId);
+		const user = await AuthService.findById(userId);
 		if (!user) {
 			return formatFail({
 				res,
@@ -560,7 +559,7 @@ class AuthController extends BaseController {
 			});
 		}
 
-		const isPasswordValid = await UserService.comparePassword(
+		const isPasswordValid = await AuthService.checkComparePassword(
 			oldPassword,
 			user.password
 		);
@@ -572,7 +571,7 @@ class AuthController extends BaseController {
 			});
 		}
 
-		const hashedPassword = await UserService.hashPassword(newPassword);
+		const hashedPassword = await AuthService.hashPassword(newPassword);
 		if (!hashedPassword) {
 			return formatError({
 				res,
@@ -658,7 +657,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
-		const updatedUser = await UserService.updateUser(userId, {
+		const updatedUser = await AuthService.updateUser(userId, {
 			$pull: { roles: role },
 		});
 
@@ -770,7 +769,7 @@ class AuthController extends BaseController {
 	getUserPermissions = catchAsync(async (req, res) => {
 		const { userId } = req.params;
 
-		const user = await UserService.getUserById(userId);
+		const user = await AuthService.findById(userId);
 		if (!user) {
 			return formatFail({
 				res,
