@@ -426,26 +426,14 @@ class UserController extends BaseService {
 			note,
 		} = req.body;
 
-		// Validate input data
-		if (!id) {
-			return formatFail(
+		if (!idAddre) {
+			return formatFail({
 				res,
-				'Address ID is required!',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Address ID is required!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
-
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(
-				res,
-				'Update data is required',
-				StatusCodes.BAD_REQUEST
-			);
-		}
-
-		const validationAddress = UserValidation.updateAddress;
-		const { error } = validationAddress.validate({
-			id,
+		const { error } = UserValidation.updateAddress.validate({
 			fullName,
 			phoneNumber,
 			province,
@@ -455,41 +443,47 @@ class UserController extends BaseService {
 			isDefault,
 			note,
 		});
-
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const updateData = {};
-		if (fullName !== undefined) updateData.fullName = fullName;
-		if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-		if (province !== undefined) updateData.province = province;
-		if (district !== undefined) updateData.district = district;
-		if (ward !== undefined) updateData.ward = ward;
-		if (street !== undefined) updateData.street = street;
-		if (isDefault !== undefined) updateData.isDefault = isDefault;
-		if (note !== undefined) updateData.note = note;
+		const updateData = {
+			...(fullName && { fullName }),
+			...(phoneNumber && { phoneNumber }),
+			...(province && { province }),
+			...(district && { district }),
+			...(ward && { ward }),
+			...(street && { street }),
+			...(note && { note }),
+			...(typeof isDefault === 'boolean' && { isDefault }),
+		};
 
 		const updatedAddress = await UserService.updateAddress(
 			userId,
 			idAddre,
 			updateData
 		);
+
 		if (!updatedAddress) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Address not found or update failed',
-				StatusCodes.NOT_FOUND
-			);
+				message: 'Address not found or update failed',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Address updated successfully',
-			{ data: updatedAddress },
-			StatusCodes.OK
-		);
+			message: 'Address updated successfully',
+			data: { address: updatedAddress },
+			code: StatusCodes.OK,
+		});
 	});
+
 	getAllAddresses = catchAsync(async (req, res) => {
 		const addresses = await UserService.getAllAddresses();
 		if (!addresses || addresses.length === 0) {

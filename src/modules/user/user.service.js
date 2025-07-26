@@ -99,25 +99,31 @@ class UserService extends BaseService {
 	}
 	async updateAddress(userId, addressId, updateData) {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
-			throw new Error('Invalid IDs');
+			throw new Error('Invalid user ID or address ID');
 		}
-
 		const user = await this.userRepo.findById(userId);
 		if (!user) throw new Error('User not found');
 
 		const address = user.address.find((addr) => addr._id.equals(addressId));
 		if (!address) throw new Error('Address not found');
 
-		if (updateData.isDefault) {
+		if (updateData.isDefault === true) {
 			user.address.forEach((addr) => {
 				addr.isDefault = addr._id.equals(addressId);
 			});
 		}
 
 		Object.assign(address, updateData);
+
+		const hasDefault = user.address.some((addr) => addr.isDefault);
+		if (!hasDefault && user.address.length > 0) {
+			user.address[0].isDefault = true;
+		}
+
 		await this.userRepo.save(user);
 		return address;
 	}
+
 	async deleteAddress(userId, addressId) {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');

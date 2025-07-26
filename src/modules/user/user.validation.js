@@ -59,10 +59,6 @@ const UserValidation = {
 		}),
 	}),
 	updateAddress: joi.object({
-		id: joi.string().required().messages({
-			'string.empty': 'Address ID is required',
-			'any.required': 'Address ID is required',
-		}),
 		fullName: joi.string().optional().messages({
 			'string.empty': 'Full name must be a valid string',
 		}),
