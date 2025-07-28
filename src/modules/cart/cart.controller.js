@@ -1,27 +1,24 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
 import cartService from './cart.service.js';
-import CartValidation from './cart.validation.js';
+import { ValidationCart } from './cart.validation.js';
 import {
-	formatError,
-	formatFail,
 	formatSuccess,
+	formatFail,
 } from '../../shared/response/responseFormatter.js';
-class CartController {
+import BaseController from '../../core/controller/base.controller.js';
+
+class CartController extends BaseController {
 	constructor() {
-		this.cartService = cartService;
+		super(cartService);
 	}
-	createCart = catchAsync(async (req, res) => {
-		const { userId, productId, quantity } = req.body;
-		if (!userId || !productId || !quantity) {
-			return formatFail({
-				res,
-				message: 'User ID, Product ID, and Quantity are required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _CartValidation = CartValidation.createCart;
-		const { error } = _CartValidation.validate(req.body);
+
+	/**
+	 * Add item to cart
+	 * POST /api/carts
+	 */
+	addToCart = catchAsync(async (req, res) => {
+		const { error } = ValidationCart.addToCart.validate(req.body);
 		if (error) {
 			return formatFail({
 				res,
@@ -30,149 +27,253 @@ class CartController {
 				errors: error.details.map((err) => err.message),
 			});
 		}
-		const cart = await cartService.createCart({
-			userId,
-			productId,
-			quantity,
-		});
-		if (cart === null || !cart) {
-			return formatError({
-				res,
-				message: 'Cart could not be created!',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
+
+		const { userId, productId, quantity } = req.body;
+		const cartItem = await cartService.addToCart(userId, productId, quantity);
+
 		return formatSuccess({
 			res,
-			data: cart,
-			message: 'Cart created successfully!',
+			data: cartItem,
+			message: 'Item added to cart successfully',
 			code: StatusCodes.CREATED,
 		});
 	});
-	deleteCart = catchAsync(async (req, res) => {
-		const { userId, productId } = req.body;
-		if (!userId || !productId) {
-			return formatFail({
-				res,
-				message: 'User ID and Product ID are required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		const _CartValidation = CartValidation.deleteCart;
-		const { error } = _CartValidation.validate(req.body);
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-		const cart = await cartService.deleteCart({
-			userId,
-			productId,
-		});
-		if (cart === null || !cart) {
-			return formatFail({
-				res,
-				message: 'Cart not found or could not be deleted!',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: cart,
-			message: 'Cart deleted successfully!',
-			code: StatusCodes.OK,
-		});
-	});
-	updateCart = catchAsync(async (req, res) => {
-		const { userId, productId, quantity } = req.body;
-		if (!userId || !productId || !quantity) {
-			return formatFail({
-				res,
-				message: 'User ID, Product ID, and Quantity are required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		const _CartValidation = CartValidation.createCart;
-		const { error } = _CartValidation.validate(req.body);
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-		const cart = await cartService.updateCart({
-			userId,
-			productId,
-			quantity,
-		});
-		if (cart === null || !cart) {
-			return formatFail({
-				res,
-				message: 'Cart not found or could not be updated!',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: cart,
-			message: 'Cart updated successfully!',
-			code: StatusCodes.OK,
-		});
-	});
-	getCart = catchAsync(async (req, res) => {
+
+	/**
+	 * Get cart items for user
+	 * GET /api/carts/user/:userId
+	 */
+	getCartByUserId = catchAsync(async (req, res) => {
 		const { userId } = req.params;
-		if (!userId || userId === undefined) {
-			return formatFail({
-				res,
-				message: 'User ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
+
 		const cartItems = await cartService.getCartByUserId(userId);
-		if (cartItems === null || !cartItems) {
-			return formatFail({
-				res,
-				message: 'Cart not found or could not be retrieved!',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+
 		return formatSuccess({
 			res,
 			data: cartItems,
-			message: 'Cart retrieved successfully!',
+			message: 'Cart items retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
+
+	/**
+	 * Get carts with pagination
+	 * GET /api/carts/paginated
+	 */
+	getCartsPaginated = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10, userId, search = '' } = req.query;
+
+		const paginationData = await cartService.getCartsPaginated({
+			page: parseInt(page),
+			limit: parseInt(limit),
+			userId,
+			search,
+		});
+
+		return formatSuccess({
+			res,
+			data: paginationData.cartItems,
+			message: 'Cart items retrieved with pagination successfully',
+			code: StatusCodes.OK,
+			meta: {
+				pagination: {
+					page: paginationData.page,
+					pageSize: paginationData.pageSize,
+					totalItems: paginationData.totalItems,
+					totalPages: paginationData.totalPages,
+					hasNextPage: paginationData.hasNextPage,
+					hasPrevPage: paginationData.hasPrevPage,
+				},
+			},
+		});
+	});
+
+	/**
+	 * Update cart item quantity
+	 * PUT /api/carts/quantity
+	 */
+	updateCartQuantity = catchAsync(async (req, res) => {
+		const { error } = ValidationCart.updateQuantity.validate(req.body);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
+			});
+		}
+
+		const { userId, productId, quantity } = req.body;
+		const cartItem = await cartService.updateCartQuantity(userId, productId, quantity);
+
+		return formatSuccess({
+			res,
+			data: cartItem,
+			message: 'Cart quantity updated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Remove item from cart
+	 * DELETE /api/carts/item
+	 */
+	removeFromCart = catchAsync(async (req, res) => {
+		const { error } = ValidationCart.removeFromCart.validate(req.body);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
+			});
+		}
+
+		const { userId, productId } = req.body;
+		await cartService.removeFromCart(userId, productId);
+
+		return formatSuccess({
+			res,
+			data: null,
+			message: 'Item removed from cart successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Clear entire cart for user
+	 * DELETE /api/carts/clear/:userId
+	 */
 	clearCart = catchAsync(async (req, res) => {
 		const { userId } = req.params;
-		if (!userId || userId === undefined) {
-			return formatFail({
-				res,
-				message: 'User ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		const cartItems = await cartService.clearCartByUserId(userId);
-		if (cartItems === null || !cartItems) {
-			return formatFail({
-				res,
-				message: 'Cart not found or could not be cleared!',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+
+		const result = await cartService.clearCart(userId);
+
 		return formatSuccess({
 			res,
-			data: cartItems,
-			message: 'Cart cleared successfully!',
+			data: { deletedCount: result.deletedCount },
+			message: 'Cart cleared successfully',
 			code: StatusCodes.OK,
 		});
 	});
-	addMultipleItemsToCart = catchAsync(async (req, res) => {});
+
+	/**
+	 * Bulk remove items from cart
+	 * DELETE /api/carts/bulk/remove
+	 */
+	bulkRemoveFromCart = catchAsync(async (req, res) => {
+		const { error } = ValidationCart.bulkRemove.validate(req.body);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
+			});
+		}
+
+		const { userId, productIds } = req.body;
+		const result = await cartService.bulkRemoveFromCart(userId, productIds);
+
+		return formatSuccess({
+			res,
+			data: { deletedCount: result.deletedCount },
+			message: 'Items removed from cart successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get cart total for user
+	 * GET /api/carts/total/:userId
+	 */
+	getCartTotal = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		const total = await cartService.getCartTotal(userId);
+
+		return formatSuccess({
+			res,
+			data: total,
+			message: 'Cart total retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Check if product exists in cart
+	 * GET /api/carts/check/:userId/:productId
+	 */
+	checkProductInCart = catchAsync(async (req, res) => {
+		const { userId, productId } = req.params;
+
+		const exists = await cartService.checkProductInCart(userId, productId);
+
+		return formatSuccess({
+			res,
+			data: { exists },
+			message: 'Product check completed',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Decrease quantity from cart
+	 * PATCH /api/carts/decrease
+	 */
+	decreaseQuantity = catchAsync(async (req, res) => {
+		const { error } = ValidationCart.decreaseQuantity.validate(req.body);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
+			});
+		}
+
+		const { userId, productId, decreaseBy } = req.body;
+		const result = await cartService.decreaseQuantity(userId, productId, decreaseBy);
+
+		return formatSuccess({
+			res,
+			data: result,
+			message: 'Cart quantity decreased successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get cart statistics
+	 * GET /api/carts/stats
+	 */
+	getCartStats = catchAsync(async (req, res) => {
+		const stats = await cartService.getCartStats();
+
+		return formatSuccess({
+			res,
+			data: stats,
+			message: 'Cart statistics retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get abandoned carts
+	 * GET /api/carts/abandoned
+	 */
+	getAbandonedCarts = catchAsync(async (req, res) => {
+		const { days = 7 } = req.query;
+
+		const abandonedCarts = await cartService.getAbandonedCarts(parseInt(days));
+
+		return formatSuccess({
+			res,
+			data: abandonedCarts,
+			message: 'Abandoned carts retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
 }
 
 export default new CartController();
