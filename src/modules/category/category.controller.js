@@ -3,30 +3,22 @@ import { catchAsync } from '../../configs/catchAsync.js';
 import categoryService from './category.service.js';
 import { ValidationCategory } from './category.validation.js';
 import {
-	formatError,
-	formatFail,
 	formatSuccess,
+	formatFail,
 } from '../../shared/response/responseFormatter.js';
 import BaseController from '../../core/controller/base.controller.js';
+
 class CategoryController extends BaseController {
 	constructor() {
 		super(categoryService);
 	}
+
+	/**
+	 * Create new category
+	 * POST /api/categories
+	 */
 	createCategory = catchAsync(async (req, res) => {
-		const { name, parentId, description } = req.body;
-		if (!name || !parentId || !description) {
-			return formatFail({
-				res,
-				message: 'Name, parentId, and description are required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _validationCategory = ValidationCategory.createCategory;
-		const { error } = _validationCategory.validate({
-			name,
-			parentId,
-			description,
-		});
+		const { error } = ValidationCategory.createCategory.validate(req.body);
 		if (error) {
 			return formatFail({
 				res,
@@ -35,212 +27,89 @@ class CategoryController extends BaseController {
 				errors: error.details.map((err) => err.message),
 			});
 		}
-		const newCategory = await this.categoryService.createCategory({
-			name,
-			parentId,
-			description,
-		});
-		if (!newCategory) {
-			return formatError({
-				res,
-				message: 'Category creation failed!',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
+
+		const category = await categoryService.createCategory(req.body);
+
 		return formatSuccess({
 			res,
-			data: newCategory,
+			data: category,
 			message: 'Category created successfully',
 			code: StatusCodes.CREATED,
 		});
 	});
-	deleteCategory = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		if (!id || id === 'undefined') {
-			return formatFail({
-				res,
-				message: 'Category ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _validationCategory = ValidationCategory.deleteCategory;
-		const { error } = _validationCategory.validate({ id });
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-		const deleted = await this.categoryService.deleteCategory(id);
-		if (!deleted) {
-			return formatFail({
-				res,
-				message: 'Category not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			message: 'Category deleted successfully',
-			code: StatusCodes.OK,
-		});
-	});
-	updateCategory = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { name, parentId, description } = req.body;
 
-		if (!id || !name || !parentId || !description) {
-			return formatFail({
-				res,
-				message: 'ID, name, parentId, and description are required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _validationCategory = ValidationCategory.updateCategory;
-		const { error } = _validationCategory.validate({
-			id,
-			name,
-			parentId,
-			description,
-		});
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-
-		const updateCategory = await this.categoryService.updateCategory(id, {
-			name,
-			parentId,
-			description,
-		});
-		if (!updateCategory) {
-			return formatError({
-				res,
-				message: 'Category update failed!',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: updateCategory,
-			message: 'Category updated successfully',
-			code: StatusCodes.OK,
-		});
-	});
+	/**
+	 * Get all categories
+	 * GET /api/categories
+	 */
 	getAllCategories = catchAsync(async (req, res) => {
-		const categories = await this.categoryService.getAllCategories();
-		if (!categories || categories.length === 0) {
-			return formatFail({
-				res,
-				message: 'No categories found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+		const categories = await categoryService.getAllCategories();
+
 		return formatSuccess({
 			res,
 			data: categories,
-			message: 'All categories fetched successfully',
+			message: 'Categories retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
 
-	getTreeCategories = catchAsync(async (req, res) => {
-		const tree = await this.categoryService.getTreeCategories();
-		if (!tree || tree.length === 0) {
-			return formatFail({
-				res,
-				message: 'No tree categories found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: tree,
-			message: 'Tree categories fetched successfully',
-			code: StatusCodes.OK,
-		});
-	});
-
+	/**
+	 * Get category by ID
+	 * GET /api/categories/:id
+	 */
 	getCategoryById = catchAsync(async (req, res) => {
 		const { id } = req.params;
-		if (!id || id === 'undefined') {
-			return formatFail({
-				res,
-				message: 'Category ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _validationCategory = ValidationCategory.getCategoryById;
-		const { error } = _validationCategory.validate({ id });
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-		const category = await this.categoryService.getCategoryById(id);
-		if (!category) {
-			return formatFail({
-				res,
-				message: 'Category not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+
+		const category = await categoryService.getCategoryById(id);
+
 		return formatSuccess({
 			res,
 			data: category,
-			message: 'Category fetched successfully',
+			message: 'Category retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
 
+	/**
+	 * Get category by slug
+	 * GET /api/categories/slug/:slug
+	 */
 	getCategoryBySlug = catchAsync(async (req, res) => {
 		const { slug } = req.params;
-		if (!slug) {
-			return formatFail({
-				res,
-				message: 'Category slug is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		let _validationCategory = ValidationCategory.getCategoryBySlug;
-		const { error } = _validationCategory.validate({ slug });
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-				errors: error.details.map((err) => err.message),
-			});
-		}
-		const category = await this.categoryService.getCategoryBySlug(slug);
-		if (!category) {
-			return formatFail({
-				res,
-				message: 'Category not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+
+		const category = await categoryService.getCategoryBySlug(slug);
+
 		return formatSuccess({
 			res,
 			data: category,
-			message: 'Category fetched successfully',
+			message: 'Category retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
 
+	/**
+	 * Get category tree structure
+	 * GET /api/categories/tree
+	 */
+	getTreeCategories = catchAsync(async (req, res) => {
+		const categoryTree = await categoryService.getTreeCategories();
+
+		return formatSuccess({
+			res,
+			data: categoryTree,
+			message: 'Category tree retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get categories with pagination
+	 * GET /api/categories/paginated
+	 */
 	getCategoriesPaginated = catchAsync(async (req, res) => {
 		const { page = 1, limit = 10, search = '' } = req.query;
 
-		const paginationData = await this.categoryService.getCategoriesPaginated({
+		const paginationData = await categoryService.getCategoriesPaginated({
 			page: parseInt(page),
 			limit: parseInt(limit),
 			search,
@@ -248,12 +117,110 @@ class CategoryController extends BaseController {
 
 		return formatSuccess({
 			res,
-			data: paginationData.data,
-			message: 'Categories fetched with pagination successfully',
+			data: paginationData.categories,
+			message: 'Categories retrieved with pagination successfully',
 			code: StatusCodes.OK,
 			meta: {
-				pagination: paginationData.pagination,
+				pagination: {
+					page: paginationData.page,
+					pageSize: paginationData.pageSize,
+					totalItems: paginationData.totalItems,
+					totalPages: paginationData.totalPages,
+					hasNextPage: paginationData.hasNextPage,
+					hasPrevPage: paginationData.hasPrevPage,
+				},
 			},
+		});
+	});
+
+	/**
+	 * Get children categories by parent ID
+	 * GET /api/categories/:parentId/children
+	 */
+	getChildrenCategories = catchAsync(async (req, res) => {
+		const { parentId } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+
+		const result = await categoryService.getChildrenCategories(
+			parentId,
+			parseInt(page),
+			parseInt(limit)
+		);
+
+		return formatSuccess({
+			res,
+			data: result.categories,
+			message: 'Children categories retrieved successfully',
+			code: StatusCodes.OK,
+			meta: {
+				pagination: {
+					page: result.page,
+					pageSize: result.pageSize,
+					totalItems: result.totalItems,
+					totalPages: result.totalPages,
+					hasNextPage: result.hasNextPage,
+					hasPrevPage: result.hasPrevPage,
+				},
+			},
+		});
+	});
+
+	/**
+	 * Update category
+	 * PUT /api/categories/:id
+	 */
+	updateCategory = catchAsync(async (req, res) => {
+		const { id } = req.params;
+
+		const { error } = ValidationCategory.updateCategory.validate(req.body);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+				errors: error.details.map((err) => err.message),
+			});
+		}
+
+		const category = await categoryService.updateCategory(id, req.body);
+
+		return formatSuccess({
+			res,
+			data: category,
+			message: 'Category updated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Delete category
+	 * DELETE /api/categories/:id
+	 */
+	deleteCategory = catchAsync(async (req, res) => {
+		const { id } = req.params;
+
+		await categoryService.deleteCategory(id);
+
+		return formatSuccess({
+			res,
+			data: null,
+			message: 'Category deleted successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get category statistics
+	 * GET /api/categories/stats
+	 */
+	getCategoryStats = catchAsync(async (req, res) => {
+		const stats = await categoryService.getCategoryStats();
+
+		return formatSuccess({
+			res,
+			data: stats,
+			message: 'Category statistics retrieved successfully',
+			code: StatusCodes.OK,
 		});
 	});
 }

@@ -1,5 +1,6 @@
 import BaseRepository from '../../core/repository/base.repository.js';
 import Product from './product.model.js';
+import { getPaginationMeta } from '../../shared/response/pagination.js';
 
 class ProductRepository extends BaseRepository {
 	constructor() {
@@ -24,9 +25,7 @@ class ProductRepository extends BaseRepository {
 				data: products,
 				pagination: {
 					total,
-					page,
-					limit,
-					totalPages: Math.ceil(total / limit),
+					...getPaginationMeta(page, limit, total),
 				},
 			};
 		} catch (error) {
@@ -86,9 +85,7 @@ class ProductRepository extends BaseRepository {
 				data: products,
 				pagination: {
 					total,
-					page,
-					limit,
-					totalPages: Math.ceil(total / limit),
+					...getPaginationMeta(page, limit, total),
 				},
 			};
 		} catch (error) {

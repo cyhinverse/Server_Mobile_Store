@@ -1,5 +1,6 @@
 import BaseRepository from '../../core/repository/base.repository.js';
 import Promotion from './promotion.model.js';
+import { getPaginationMeta } from '../../shared/response/pagination.js';
 
 class PromotionRepository extends BaseRepository {
 	constructor() {
@@ -63,9 +64,7 @@ class PromotionRepository extends BaseRepository {
 				data: promotions,
 				pagination: {
 					total,
-					page,
-					limit,
-					totalPages: Math.ceil(total / limit),
+					...getPaginationMeta(page, limit, total),
 				},
 			};
 		} catch (error) {

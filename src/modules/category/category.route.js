@@ -3,20 +3,34 @@ const router = express.Router();
 
 import CategoryController from './category.controller.js';
 
+// Create category
 router.post('/', CategoryController.createCategory);
 
-router.delete('/:id', CategoryController.deleteCategory);
+// Get category statistics
+router.get('/stats', CategoryController.getCategoryStats);
 
-router.put('/:id', CategoryController.updateCategory);
+// Get categories with pagination
+router.get('/paginated', CategoryController.getCategoriesPaginated);
 
-router.get('/all', CategoryController.getAllCategories);
-
-router.get('/', CategoryController.getCategoriesPaginated);
-
+// Get category tree structure
 router.get('/tree', CategoryController.getTreeCategories);
 
+// Get all categories
+router.get('/all', CategoryController.getAllCategories);
+
+// Get category by slug
+router.get('/slug/:slug', CategoryController.getCategoryBySlug);
+
+// Get children categories by parent ID
+router.get('/:parentId/children', CategoryController.getChildrenCategories);
+
+// Get category by ID
 router.get('/:id', CategoryController.getCategoryById);
 
-router.get('/slug/:slug', CategoryController.getCategoryBySlug);
+// Update category
+router.put('/:id', CategoryController.updateCategory);
+
+// Delete category
+router.delete('/:id', CategoryController.deleteCategory);
 
 export default router;

@@ -1,11 +1,7 @@
 import BaseRepository from '../../core/repository/base.repository.js';
 import Notification from './notification.model.js';
+import { getPaginationMeta } from '../../shared/response/pagination.js';
 
-/**
- * Notification Repository - Data Access Layer
- * Responsible for direct database operations only
- * No business logic or validation
- */
 class NotificationRepository extends BaseRepository {
 	constructor() {
 		super(Notification);
@@ -33,9 +29,7 @@ class NotificationRepository extends BaseRepository {
 		return {
 			notifications,
 			total,
-			page,
-			limit,
-			totalPages: Math.ceil(total / limit),
+			...getPaginationMeta(page, limit, total),
 		};
 	}
 
@@ -101,9 +95,7 @@ class NotificationRepository extends BaseRepository {
 		return {
 			notifications,
 			total,
-			page,
-			limit,
-			totalPages: Math.ceil(total / limit),
+			...getPaginationMeta(page, limit, total),
 		};
 	}
 

@@ -1,5 +1,6 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import brandModel from './brand.model.js';
+import { getPaginationMeta } from '../../shared/response/pagination.js';
 
 class BrandService {
 	constructor() {
@@ -66,9 +67,7 @@ class BrandService {
 			return {
 				data: brands,
 				total,
-				page: Number(page),
-				limit: Number(limit),
-				totalPages: Math.ceil(total / limit),
+				...getPaginationMeta(Number(page), Number(limit), total),
 			};
 		}
 	);

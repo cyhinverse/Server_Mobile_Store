@@ -10,6 +10,7 @@ import morgan from 'morgan'; // HTTP request logger
 import compression from 'compression'; // Response compression
 import cookieParser from 'cookie-parser'; // Cookie parser
 import { initSocketIo } from './sockets/index.js'; // WebSocket for real-time
+import { startNotificationJobs } from './jobs/notification.job.js'; // Notification jobs
 import http from 'http'; // HTTP server
 // Load environment variables from .env file
 dotenv.config();
@@ -47,6 +48,9 @@ connectDB(app);
 
 // Initialize Socket.IO for real-time communication
 const io = initSocketIo(server);
+
+// Start notification jobs
+startNotificationJobs();
 
 // Start server
 server.listen(PORT, () => {

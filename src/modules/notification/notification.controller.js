@@ -8,13 +8,6 @@ import {
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
 
-/**
- * Notification Controller - HTTP Request/Response Handler
- * Follows 3-tier architecture: only handles HTTP layer
- * - Validates request parameters and body
- * - Delegates business logic to Service layer
- * - Formats and sends HTTP responses
- */
 class NotificationController {
 	constructor() {
 		if (NotificationController.instance) return NotificationController.instance;
@@ -48,7 +41,10 @@ class NotificationController {
 
 		try {
 			const userId = req.user.id;
-			const result = await NotificationService.getUserNotifications(userId, value);
+			const result = await NotificationService.getUserNotifications(
+				userId,
+				value
+			);
 
 			return formatSuccess({
 				res,
@@ -137,14 +133,12 @@ class NotificationController {
 	 * POST /api/notifications/system
 	 */
 	createSystemNotification = catchAsync(async (req, res) => {
-		const { error, value } = NotificationValidation.createSystemNotification.validate(
-			req.body,
-			{
+		const { error, value } =
+			NotificationValidation.createSystemNotification.validate(req.body, {
 				abortEarly: false,
 				allowUnknown: false,
 				stripUnknown: true,
-			}
-		);
+			});
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -254,7 +248,10 @@ class NotificationController {
 
 		try {
 			const userId = req.user.id;
-			const notification = await NotificationService.markAsRead(value.id, userId);
+			const notification = await NotificationService.markAsRead(
+				value.id,
+				userId
+			);
 
 			return formatSuccess({
 				res,
@@ -455,14 +452,12 @@ class NotificationController {
 	 * POST /api/notifications/order
 	 */
 	createOrderNotification = catchAsync(async (req, res) => {
-		const { error, value } = NotificationValidation.createOrderNotification.validate(
-			req.body,
-			{
+		const { error, value } =
+			NotificationValidation.createOrderNotification.validate(req.body, {
 				abortEarly: false,
 				allowUnknown: false,
 				stripUnknown: true,
-			}
-		);
+			});
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -503,14 +498,12 @@ class NotificationController {
 	 * POST /api/notifications/promotion
 	 */
 	createPromotionNotification = catchAsync(async (req, res) => {
-		const { error, value } = NotificationValidation.createPromotionNotification.validate(
-			req.body,
-			{
+		const { error, value } =
+			NotificationValidation.createPromotionNotification.validate(req.body, {
 				abortEarly: false,
 				allowUnknown: false,
 				stripUnknown: true,
-			}
-		);
+			});
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -524,11 +517,12 @@ class NotificationController {
 		}
 
 		try {
-			const notification = await NotificationService.createPromotionNotification(
-				value.userId,
-				value.promotionId,
-				value.promotionData
-			);
+			const notification =
+				await NotificationService.createPromotionNotification(
+					value.userId,
+					value.promotionId,
+					value.promotionData
+				);
 
 			return formatSuccess({
 				res,
