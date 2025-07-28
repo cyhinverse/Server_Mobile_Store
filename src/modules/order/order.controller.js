@@ -1,6 +1,7 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import { StatusCodes } from 'http-status-codes';
 import OrderService from './order.service.js';
+import { OrderValidation } from './order.validation.js';
 import {
 	formatError,
 	formatFail,
@@ -9,381 +10,420 @@ import {
 
 class OrderController {
 	constructor() {
-		if (!OrderController.instance) return OrderController.instance;
+		if (OrderController.instance) return OrderController.instance;
 		OrderController.instance = this;
 	}
+
+	// Create new order
 	createOrder = catchAsync(async (req, res) => {
-		const { userId } = req.user;
-		const {
-			variant_id,
-			payment_id,
-			name,
-			image,
-			color,
-			storage,
-			quantity,
-			status,
-			note,
-			payment_method,
-			discountCode,
-		} = req.body;
+		const { error, value } = OrderValidation.createOrder.validate(req.body, {
+			abortEarly: false,
+			allowUnknown: false,
+			stripUnknown: true,
+		});
 
-		// Basic validation
-		if (!variant_id || !quantity) {
-			return formatFail({
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
 				res,
-				message: 'Variant ID and quantity are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		try {
-			const order = await OrderService.createOrder(
-				userId,
-				variant_id,
-				payment_id,
-				name,
-				image,
-				color,
-				storage,
-				quantity,
-				status,
-				note,
-				payment_method,
-				discountCode
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
 			);
-
-			if (!order && order === null) {
-				return formatError({
-					res,
-					message: 'Create order failed!',
-					code: StatusCodes.INTERNAL_SERVER_ERROR,
-				});
-			}
-
-			return formatSuccess({
-				res,
-				data: order,
-				message: 'Create order successfully!',
-				code: StatusCodes.CREATED,
-			});
-		} catch (error) {
-			return formatError({
-				res,
-				message: error.message || 'Internal server error while creating order',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-	});
-	deleteOrder = catchAsync(async (req, res) => {
-		const { id } = req.params;
-
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'Order ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
 		}
 
 		try {
-			const deleted = await OrderService.deleteOrder(id);
-			if (!deleted) {
-				return formatFail({
-					res,
-					message: 'Order not found or could not be deleted',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
+			value.userId = req.user.id;
+			const order = await OrderService.createOrder(value);
+			return formatSuccess(
 				res,
-				data: deleted,
-				message: 'Delete order successfully!',
-				code: StatusCodes.OK,
-			});
+				'Order created successfully',
+				StatusCodes.CREATED,
+				order
+			);
 		} catch (error) {
-			return formatError({
-				res,
-				message: error.message || 'Internal server error while deleting order',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
-	updateStatus = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { status } = req.body;
 
-		if (!id || !status) {
-			return formatFail({
-				res,
-				message: 'Order ID and status are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		try {
-			const updated = await OrderService.updateStatus(id, status);
-			if (!updated) {
-				return formatFail({
-					res,
-					message: 'Order not found or status update failed',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
-				res,
-				data: updated,
-				message: 'Update status successfully!',
-				code: StatusCodes.OK,
-			});
-		} catch (error) {
-			return formatError({
-				res,
-				message: error.message || 'Internal server error while updating status',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-	});
-	updateNote = catchAsync(async (req, res) => {
-		const { userId } = req.user;
-		const { note } = req.body;
-
-		if (!note) {
-			return formatFail({
-				res,
-				message: 'Note is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		try {
-			const updatedOrder = await OrderService.updateNote(userId, note);
-			if (!updatedOrder) {
-				return formatFail({
-					res,
-					message: 'Order not found or note update failed',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
-				res,
-				data: updatedOrder,
-				message: 'Update note successfully!',
-				code: StatusCodes.OK,
-			});
-		} catch (error) {
-			return formatError({
-				res,
-				message: error.message || 'Internal server error while updating note',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-	});
-	cancelOrder = catchAsync(async (req, res) => {
-		const { id } = req.params;
-
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'Order ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		try {
-			const cancelledOrder = await OrderService.cancelOrder(id);
-			if (!cancelledOrder) {
-				return formatFail({
-					res,
-					message: 'Order not found or could not be cancelled',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
-				res,
-				data: cancelledOrder,
-				message: 'Cancel order successfully!',
-				code: StatusCodes.OK,
-			});
-		} catch (error) {
-			return formatError({
-				res,
-				message:
-					error.message || 'Internal server error while cancelling order',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-	});
+	// Get order by ID
 	getOrderById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail({
+			return formatFail(
 				res,
-				message: 'Order ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
+				'Order ID is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
 
 		try {
 			const order = await OrderService.getOrderById(id);
-			if (!order) {
-				return formatFail({
-					res,
-					message: 'Order not found',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
+			return formatSuccess(
 				res,
-				data: order,
-				message: 'Get order successfully!',
-				code: StatusCodes.OK,
-			});
+				'Order retrieved successfully',
+				StatusCodes.OK,
+				order
+			);
 		} catch (error) {
-			return formatError({
-				res,
-				message:
-					error.message || 'Internal server error while retrieving order',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
-	getOrderByUserId = catchAsync(async (req, res) => {
-		const { userId } = req.user;
+
+	// Get orders by user ID (current user)
+	getMyOrders = catchAsync(async (req, res) => {
+		try {
+			const userId = req.user.id;
+			const { page = 1, limit = 10, status } = req.query;
+			
+			const options = {
+				page: parseInt(page),
+				limit: parseInt(limit),
+				status
+			};
+
+			const result = await OrderService.getOrdersByUserId(userId, options);
+			return formatSuccess(
+				res,
+				'User orders retrieved successfully',
+				StatusCodes.OK,
+				result
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Get orders by user ID (for admin)
+	getOrdersByUserId = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+		const { page = 1, limit = 10, status } = req.query;
+
+		if (!userId) {
+			return formatFail(
+				res,
+				'User ID is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
 
 		try {
-			const orders = await OrderService.getOrderByUserId(userId);
-			if (!orders || orders.length === 0) {
-				return formatFail({
-					res,
-					message: 'No orders found for this user',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
+			const options = {
+				page: parseInt(page),
+				limit: parseInt(limit),
+				status
+			};
 
-			return formatSuccess({
+			const result = await OrderService.getOrdersByUserId(userId, options);
+			return formatSuccess(
 				res,
-				data: orders,
-				message: 'Get orders successfully!',
-				code: StatusCodes.OK,
-			});
+				'User orders retrieved successfully',
+				StatusCodes.OK,
+				result
+			);
 		} catch (error) {
-			return formatError({
-				res,
-				message:
-					error.message || 'Internal server error while retrieving user orders',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
+
+	// Get all orders with filters
 	getAllOrders = catchAsync(async (req, res) => {
 		try {
-			const orders = await OrderService.getAllOrders();
-			if (!orders || orders.length === 0) {
-				return formatFail({
-					res,
-					message: 'No orders found',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
+			const { 
+				page = 1, 
+				limit = 10, 
+				status, 
+				paymentMethod, 
+				dateFrom, 
+				dateTo,
+				minTotal,
+				maxTotal
+			} = req.query;
 
-			return formatSuccess({
+			const filters = {};
+			if (status) filters.status = status;
+			if (paymentMethod) filters.paymentMethod = paymentMethod;
+			if (dateFrom) filters.dateFrom = dateFrom;
+			if (dateTo) filters.dateTo = dateTo;
+			if (minTotal) filters.minTotal = parseFloat(minTotal);
+			if (maxTotal) filters.maxTotal = parseFloat(maxTotal);
+
+			const options = {
+				page: parseInt(page),
+				limit: parseInt(limit),
+			};
+
+			const result = await OrderService.getAllOrders(filters, options);
+			return formatSuccess(
 				res,
-				data: orders,
-				message: 'Get all orders successfully!',
-				code: StatusCodes.OK,
-			});
+				'Orders retrieved successfully',
+				StatusCodes.OK,
+				result
+			);
 		} catch (error) {
-			return formatError({
-				res,
-				message:
-					error.message || 'Internal server error while retrieving all orders',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
+
+	// Get orders by status
 	getOrdersByStatus = catchAsync(async (req, res) => {
 		const { status } = req.params;
+		const { page = 1, limit = 10 } = req.query;
 
 		if (!status) {
-			return formatFail({
+			return formatFail(
 				res,
-				message: 'Status is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
+				'Status is required',
+				StatusCodes.BAD_REQUEST
+			);
 		}
 
 		try {
-			const orders = await OrderService.getOrdersByStatus(status);
-			if (!orders || orders.length === 0) {
-				return formatFail({
-					res,
-					message: 'No orders found with this status',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
+			const options = {
+				page: parseInt(page),
+				limit: parseInt(limit),
+			};
 
-			return formatSuccess({
+			const result = await OrderService.getOrdersByStatus(status, options);
+			return formatSuccess(
 				res,
-				data: orders,
-				message: 'Get orders by status successfully!',
-				code: StatusCodes.OK,
-			});
+				'Orders by status retrieved successfully',
+				StatusCodes.OK,
+				result
+			);
 		} catch (error) {
-			return formatError({
-				res,
-				message:
-					error.message ||
-					'Internal server error while retrieving orders by status',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+			if (error.message.includes('Invalid status')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
-	updatePayementMethod = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { payment_method } = req.body;
 
-		if (!id || !payment_method) {
-			return formatFail({
+	// Update order status
+	updateOrderStatus = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { error, value } = OrderValidation.updateStatus.validate(req.body, {
+			abortEarly: false,
+			allowUnknown: false,
+			stripUnknown: true,
+		});
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
 				res,
-				message: 'Order ID and payment method are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
 		try {
-			const updatedOrder = await OrderService.updatePayementMethod(
-				id,
-				payment_method
+			const order = await OrderService.updateOrderStatus(id, value.status);
+			return formatSuccess(
+				res,
+				'Order status updated successfully',
+				StatusCodes.OK,
+				order
 			);
-			if (!updatedOrder) {
-				return formatFail({
-					res,
-					message: 'Order not found or payment method update failed',
-					code: StatusCodes.NOT_FOUND,
-				});
-			}
-
-			return formatSuccess({
-				res,
-				data: updatedOrder,
-				message: 'Update payment method successfully!',
-				code: StatusCodes.OK,
-			});
 		} catch (error) {
-			return formatError({
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			if (error.message.includes('Invalid status')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Update order note
+	updateOrderNote = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { error, value } = OrderValidation.updateNote.validate(req.body, {
+			abortEarly: false,
+			allowUnknown: false,
+			stripUnknown: true,
+		});
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
 				res,
-				message:
-					error.message ||
-					'Internal server error while updating payment method',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
+		}
+
+		try {
+			const order = await OrderService.updateOrderNote(id, value.note);
+			return formatSuccess(
+				res,
+				'Order note updated successfully',
+				StatusCodes.OK,
+				order
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Update payment method
+	updatePaymentMethod = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { error, value } = OrderValidation.updatePaymentMethod.validate(req.body, {
+			abortEarly: false,
+			allowUnknown: false,
+			stripUnknown: true,
+		});
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
+		}
+
+		try {
+			const order = await OrderService.updatePaymentMethod(id, value.paymentMethod);
+			return formatSuccess(
+				res,
+				'Payment method updated successfully',
+				StatusCodes.OK,
+				order
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			if (error.message.includes('Invalid payment method')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Cancel order
+	cancelOrder = catchAsync(async (req, res) => {
+		const { id } = req.params;
+
+		if (!id) {
+			return formatFail(
+				res,
+				'Order ID is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			const order = await OrderService.cancelOrder(id);
+			return formatSuccess(
+				res,
+				'Order cancelled successfully',
+				StatusCodes.OK,
+				order
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			if (error.message.includes('Cannot cancel') || error.message.includes('already cancelled')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Delete order
+	deleteOrder = catchAsync(async (req, res) => {
+		const { id } = req.params;
+
+		if (!id) {
+			return formatFail(
+				res,
+				'Order ID is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			await OrderService.deleteOrder(id);
+			return formatSuccess(
+				res,
+				'Order deleted successfully',
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Get order statistics
+	getOrderStats = catchAsync(async (req, res) => {
+		try {
+			const stats = await OrderService.getOrderStats();
+			return formatSuccess(
+				res,
+				'Order statistics retrieved successfully',
+				StatusCodes.OK,
+				stats
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Get orders by date range
+	getOrdersByDateRange = catchAsync(async (req, res) => {
+		const { error, value } = OrderValidation.dateRange.validate(req.query, {
+			abortEarly: false,
+			allowUnknown: false,
+			stripUnknown: true,
+		});
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
+		}
+
+		try {
+			const { startDate, endDate, page = 1, limit = 10 } = value;
+			const options = {
+				page: parseInt(page),
+				limit: parseInt(limit),
+			};
+
+			const result = await OrderService.getOrdersByDateRange(startDate, endDate, options);
+			return formatSuccess(
+				res,
+				'Orders by date range retrieved successfully',
+				StatusCodes.OK,
+				result
+			);
+		} catch (error) {
+			if (error.message.includes('Invalid date') || error.message.includes('before end date')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
 }

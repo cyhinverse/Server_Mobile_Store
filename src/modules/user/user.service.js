@@ -1,51 +1,121 @@
 import { Types } from 'mongoose';
+import { catchAsync } from '../../configs/catchAsync.js';
 import BaseService from '../../core/service/base.service.js';
-import UserRepository from './user.repository.js';
+import userRepository from './user.repository.js';
+import { hashPassword, comparePassword } from '../../utils/password.util.js';
+
 class UserService extends BaseService {
 	constructor() {
-		super(UserRepository);
-		if (UserService.instance) return UserService.instance;
-		UserService.instance = this;
-		this.userRepo = UserRepository;
+		super(userRepository);
+		this.userRepo = userRepository;
 	}
-	async createUser(data) {
-		if (!data || Object.keys(data).length === 0) {
-			throw new Error('User data is required');
-		}
+
+	/**
+	 * Create new user (Admin function)
+	 */
+	createUser = catchAsync(async (data) => {
 		const { fullName, email, password, roles } = data;
+
+		// Business validation
 		if (!fullName || !email || !password) {
 			throw new Error('Full name, email, and password are required');
 		}
-		const existingUser = await this.userRepo.findOne({ email });
+
+		// Check if email already exists
+		const existingUser = await this.userRepo.findByEmail(email);
 		if (existingUser) {
 			throw new Error('Email already exists');
 		}
 
+		// Hash password
+		const hashedPassword = await hashPassword(password);
+
 		const newUser = {
 			fullName,
 			email,
-			password,
+			password: hashedPassword,
 			roles: roles || 'user',
 		};
-		const createdUser = await this.userRepo.create(newUser);
-		return createdUser;
-	}
-	async updateUser(userId, dataUser) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		const user = await this.userRepo.findById(userId);
 
-		if (!user) throw new Error('User not found');
-		const updatedUser = await this.userRepo.update(userId, dataUser);
-		return updatedUser;
-	}
-	async deleteUser(userId) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		const createdUser = await this.userRepo.create(newUser);
+		// Remove password from response
+		const { password: _, ...userWithoutPassword } = createdUser.toObject();
+		return userWithoutPassword;
+	});
+
+	/**
+	 * Get all users with pagination
+	 */
+	getUsersPaginated = catchAsync(async ({ page, limit, search, role }) => {
+		return await this.userRepo.findWithPagination({
+			page,
+			limit,
+			search,
+			role,
+		});
+	});
+
+	/**
+	 * Get user by ID
+	 */
+	getUserById = catchAsync(async (userId) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
 		const user = await this.userRepo.findById(userId);
-		if (!user) throw new Error('User not found');
-		return await this.userRepo.deleteOne({ _id: userId });
-	}
-	async addAddress(userId, addressData) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		if (!user) {
+			throw new Error('User not found');
+		}
+
+		return user;
+	});
+
+	/**
+	 * Update user
+	 */
+	updateUser = catchAsync(async (userId, dataUser) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
+		const user = await this.userRepo.findById(userId);
+		if (!user) {
+			throw new Error('User not found');
+		}
+
+		// If password is being updated, hash it
+		if (dataUser.password) {
+			dataUser.password = await hashPassword(dataUser.password);
+		}
+
+		return await this.userRepo.update(userId, dataUser);
+	});
+
+	/**
+	 * Delete user
+	 */
+	deleteUser = catchAsync(async (userId) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
+		const user = await this.userRepo.findById(userId);
+		if (!user) {
+			throw new Error('User not found');
+		}
+
+		return await this.userRepo.delete(userId);
+	});
+
+	/**
+	 * Add address to user
+	 */
+	addAddress = catchAsync(async (userId, addressData) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
 		const requiredFields = [
 			'fullName',
 			'phoneNumber',
@@ -55,134 +125,138 @@ class UserService extends BaseService {
 			'street',
 		];
 		const missingFields = requiredFields.filter((field) => !addressData[field]);
+
 		if (missingFields.length > 0) {
 			throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
 		}
 
 		const user = await this.userRepo.findById(userId);
-		if (!user) throw new Error('User not found');
-
-		if (addressData.isDefault) {
-			user.address.forEach((addr) => (addr.isDefault = false));
-		} else {
-			const defaultAddress = user.address.find((addr) => addr.isDefault);
-			if (!defaultAddress) {
-				addressData.isDefault = true;
-			}
+		if (!user) {
+			throw new Error('User not found');
 		}
 
-		const newAddress = {
-			...addressData,
-			user: userId,
-			_id: new Types.ObjectId(),
-			isDefault: addressData.isDefault,
-			createdAt: new Date(),
-		};
+		return await this.userRepo.addAddress(userId, addressData);
+	});
 
-		user.address.push(newAddress);
-		await this.userRepo.save(user);
-		return newAddress;
-	}
-	async getAddresses(userId) {
-		const user = await this.userRepo.getAddressesByUserId(userId);
-		if (!user) throw new Error('User not found');
-
-		return user.address.sort(
-			(a, b) => b.isDefault - a.isDefault || b.createdAt - a.createdAt
-		);
-	}
-	async getAddressById(userId, addressId) {
-		const user = await this.userRepo.getAddressById(userId, addressId);
-		if (!user?.address?.length) throw new Error('Address not found');
-
-		return user.address[0];
-	}
-	async updateAddress(userId, addressId, updateData) {
-		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
-			throw new Error('Invalid user ID or address ID');
-		}
-		const user = await this.userRepo.findById(userId);
-		if (!user) throw new Error('User not found');
-
-		const address = user.address.find((addr) => addr._id.equals(addressId));
-		if (!address) throw new Error('Address not found');
-
-		if (updateData.isDefault === true) {
-			user.address.forEach((addr) => {
-				addr.isDefault = addr._id.equals(addressId);
-			});
-		}
-
-		Object.assign(address, updateData);
-
-		const hasDefault = user.address.some((addr) => addr.isDefault);
-		if (!hasDefault && user.address.length > 0) {
-			user.address[0].isDefault = true;
-		}
-
-		await this.userRepo.save(user);
-		return address;
-	}
-
-	async deleteAddress(userId, addressId) {
+	/**
+	 * Update user address
+	 */
+	updateAddress = catchAsync(async (userId, addressId, addressData) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
 
-		const user = await this.userRepo.findById(userId);
-		if (!user) throw new Error('User not found');
-
-		const address = user.address.find((addr) => addr._id.equals(addressId));
-		if (!address) throw new Error('Address not found');
-
-		if (address.isDefault && user.address.length > 1) {
-			const newDefault = user.address.find((a) => !a._id.equals(addressId));
-			if (newDefault) newDefault.isDefault = true;
+		const existingAddress = await this.userRepo.getAddressById(
+			userId,
+			addressId
+		);
+		if (!existingAddress) {
+			throw new Error('Address not found');
 		}
 
-		user.address.pull(addressId);
-		await this.userRepo.save(user);
-		return address;
-	}
-	async setDefaultAddress(userId, addressId) {
+		return await this.userRepo.updateAddress(userId, addressId, addressData);
+	});
+
+	/**
+	 * Delete user address
+	 */
+	deleteAddress = catchAsync(async (userId, addressId) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
 
-		const user = await this.userRepo.findById(userId);
-		if (!user) throw new Error('User not found');
-
-		const address = user.address.find(
-			(addr) => addr._id.toString() === addressId.toString()
+		const existingAddress = await this.userRepo.getAddressById(
+			userId,
+			addressId
 		);
-		if (!address) throw new Error('Address not found');
+		if (!existingAddress) {
+			throw new Error('Address not found');
+		}
 
-		user.address.forEach((addr) => {
-			addr.isDefault = addr._id.toString() === addressId.toString();
-		});
+		return await this.userRepo.deleteAddress(userId, addressId);
+	});
 
-		await this.userRepo.save(user);
+	/**
+	 * Set default address
+	 */
+	setDefaultAddress = catchAsync(async (userId, addressId) => {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const existingAddress = await this.userRepo.getAddressById(
+			userId,
+			addressId
+		);
+		if (!existingAddress) {
+			throw new Error('Address not found');
+		}
+
+		return await this.userRepo.setDefaultAddress(userId, addressId);
+	});
+
+	/**
+	 * Get user addresses
+	 */
+	getAddressesByUser = catchAsync(async (userId) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
+		return await this.userRepo.getAddressesByUserId(userId);
+	});
+
+	/**
+	 * Get address by ID
+	 */
+	getAddressById = catchAsync(async (userId, addressId) => {
+		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
+			throw new Error('Invalid IDs');
+		}
+
+		const address = await this.userRepo.getAddressById(userId, addressId);
+		if (!address) {
+			throw new Error('Address not found');
+		}
+
 		return address;
-	}
-	async hashPassword(password) {
-		if (!password) throw new Error('Password is required');
-		return await this.userRepo.hashPassword(password);
-	}
-	async comparePassword(password, hash) {
-		return await this.userRepo.comparePassword(password, hash);
-	}
-	async findEmail(email) {
-		if (!email) throw new Error('Email is required');
-		const user = await this.userRepo.findOne({ email });
-		if (!user) throw new Error('User not found');
-		return user;
-	}
-	async getAddressesByUser(userId) {
-		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
-		const user = await this.userRepo.getAddressesByUserId(userId);
-		if (!user) throw new Error('User not found');
-		return user.address;
-	}
+	});
+
+	/**
+	 * Get default address
+	 */
+	getDefaultAddress = catchAsync(async (userId) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
+		return await this.userRepo.getDefaultAddress(userId);
+	});
+
+	/**
+	 * Get all addresses with pagination (Admin function)
+	 */
+	getAllAddressesPaginated = catchAsync(async ({ page, limit }) => {
+		return await this.userRepo.getAllAddressesPaginated({ page, limit });
+	});
+
+	/**
+	 * Count addresses by user
+	 */
+	countAddressesByUser = catchAsync(async (userId) => {
+		if (!Types.ObjectId.isValid(userId)) {
+			throw new Error('Invalid user ID');
+		}
+
+		return await this.userRepo.countAddressesByUser(userId);
+	});
+
+	/**
+	 * Get user statistics (Admin function)
+	 */
+	getUserStats = catchAsync(async () => {
+		return await this.userRepo.getUserStats();
+	});
 }
 
 export default new UserService();

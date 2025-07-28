@@ -1,23 +1,42 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../configs/catchAsync.js';
 
-const checkPermission = (requiredPermission) => {
+const checkPermission = (requiredRolesOrPermissions) => {
 	return catchAsync(async (req, res, next) => {
 		const user = req.user;
 
-		// Admin có tất cả quyền
-		if (user.role === 'admin' || user.roles === 'admin') {
-			return next();
-		}
-
-		// Kiểm tra permission
-		if (!user.permissions || !user.permissions.includes(requiredPermission)) {
-			return res.status(StatusCodes.FORBIDDEN).json({
-				message: `Access denied - Required permission: ${requiredPermission}`,
+		if (!user) {
+			return res.status(StatusCodes.UNAUTHORIZED).json({
+				message: 'Authentication required',
 			});
 		}
 
-		next();
+		// Convert to array if single value
+		const required = Array.isArray(requiredRolesOrPermissions)
+			? requiredRolesOrPermissions
+			: [requiredRolesOrPermissions];
+
+		// Check if user has required role
+		const userRole = user.role || user.roles;
+		if (required.includes(userRole)) {
+			return next();
+		}
+
+		// Check if user has required permissions
+		if (user.permissions && Array.isArray(user.permissions)) {
+			const hasPermission = required.some((req) =>
+				user.permissions.includes(req)
+			);
+			if (hasPermission) {
+				return next();
+			}
+		}
+
+		return res.status(StatusCodes.FORBIDDEN).json({
+			message: `Access denied - Required role or permission: ${required.join(
+				', '
+			)}`,
+		});
 	});
 };
 

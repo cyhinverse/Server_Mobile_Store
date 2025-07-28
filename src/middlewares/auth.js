@@ -19,6 +19,7 @@ const authMiddleware = catchAsync(async (req, res, next) => {
 		// Gán payload vào req.user
 		req.user = {
 			_id: decoded._id || decoded.id, // chấp nhận cả id hoặc _id
+			id: decoded._id || decoded.id, // thêm id property
 			email: decoded.email,
 			name: decoded.name,
 			roles: decoded.roles,

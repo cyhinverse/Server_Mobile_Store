@@ -8,7 +8,7 @@ import promotionRouter from '../modules/Promotion/promotion.route.js';
 import brandRouter from '../modules/brand/brand.route.js';
 import bannerRouter from '../modules/banner/banner.route.js';
 import notificationRouter from '../modules/notification/notification.route.js';
-
+import orderRouter from '../modules/order/order.route.js';
 const routes = (app) => {
 	app.use('/api/v1/users', userRouter);
 	app.use('/api/v1/auth', authRouter);
@@ -20,6 +20,7 @@ const routes = (app) => {
 	app.use('/api/v1/brands', brandRouter);
 	app.use('/api/v1/banners', bannerRouter);
 	app.use('/api/v1/notifications', notificationRouter);
+	app.use('/api/v1/orders', orderRouter);
 };
 
 export default routes;

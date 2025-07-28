@@ -619,6 +619,254 @@ class ProductController {
 			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
 	});
+
+	// Statistics
+	getProductStats = catchAsync(async (req, res) => {
+		try {
+			const stats = await this.productService.getProductStats();
+			return formatSuccess(
+				res,
+				'Product statistics retrieved successfully',
+				StatusCodes.OK,
+				stats
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Pagination
+	getProductsPaginated = catchAsync(async (req, res) => {
+		try {
+			const {
+				page = 1,
+				limit = 10,
+				sort = 'createdAt',
+				order = 'desc',
+			} = req.query;
+			const products = await this.productService.getProductsPaginated({
+				page: parseInt(page),
+				limit: parseInt(limit),
+				sort,
+				order,
+			});
+			return formatSuccess(
+				res,
+				'Products retrieved successfully',
+				StatusCodes.OK,
+				products
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Category filtering
+	getProductsByCategory = catchAsync(async (req, res) => {
+		const { categoryId } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+
+		if (!categoryId) {
+			return formatFail(
+				res,
+				'Category ID is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			const products = await this.productService.getProductsByCategory(
+				categoryId,
+				{ page: parseInt(page), limit: parseInt(limit) }
+			);
+			return formatSuccess(
+				res,
+				'Products by category retrieved successfully',
+				StatusCodes.OK,
+				products
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Featured products
+	getFeaturedProducts = catchAsync(async (req, res) => {
+		try {
+			const { limit = 10 } = req.query;
+			const products = await this.productService.getFeaturedProducts(
+				parseInt(limit)
+			);
+			return formatSuccess(
+				res,
+				'Featured products retrieved successfully',
+				StatusCodes.OK,
+				products
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Newest products
+	getNewestProducts = catchAsync(async (req, res) => {
+		try {
+			const { limit = 10 } = req.query;
+			const products = await this.productService.getNewestProducts(
+				parseInt(limit)
+			);
+			return formatSuccess(
+				res,
+				'Newest products retrieved successfully',
+				StatusCodes.OK,
+				products
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Popular products
+	getPopularProducts = catchAsync(async (req, res) => {
+		try {
+			const { limit = 10 } = req.query;
+			const products = await this.productService.getPopularProducts(
+				parseInt(limit)
+			);
+			return formatSuccess(
+				res,
+				'Popular products retrieved successfully',
+				StatusCodes.OK,
+				products
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Get product by slug
+	getProductBySlug = catchAsync(async (req, res) => {
+		const { slug } = req.params;
+
+		if (!slug) {
+			return formatFail(
+				res,
+				'Product slug is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			const product = await this.productService.getProductBySlug(slug);
+			if (!product) {
+				return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
+			}
+			return formatSuccess(
+				res,
+				'Product retrieved successfully',
+				StatusCodes.OK,
+				product
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Product reviews
+	getProductReviews = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
+		try {
+			const reviews = await this.productService.getProductReviews(id, {
+				page: parseInt(page),
+				limit: parseInt(limit),
+			});
+			return formatSuccess(
+				res,
+				'Product reviews retrieved successfully',
+				StatusCodes.OK,
+				reviews
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	addProductReview = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const userId = req.user.id;
+		const reviewData = { ...req.body, userId, productId: id };
+
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
+		try {
+			const review = await this.productService.addProductReview(reviewData);
+			return formatSuccess(
+				res,
+				'Review added successfully',
+				StatusCodes.CREATED,
+				review
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	// Product images
+	addProductImages = catchAsync(async (req, res) => {
+		const { id } = req.params;
+		const images = req.files;
+
+		if (!id) {
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
+		}
+
+		if (!images || images.length === 0) {
+			return formatFail(
+				res,
+				'At least one image is required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			const result = await this.productService.addProductImages(id, images);
+			return formatSuccess(
+				res,
+				'Images added successfully',
+				StatusCodes.OK,
+				result
+			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
+
+	deleteProductImage = catchAsync(async (req, res) => {
+		const { id, imageId } = req.params;
+
+		if (!id || !imageId) {
+			return formatFail(
+				res,
+				'Product ID and Image ID are required',
+				StatusCodes.BAD_REQUEST
+			);
+		}
+
+		try {
+			await this.productService.deleteProductImage(id, imageId);
+			return formatSuccess(res, 'Image deleted successfully', StatusCodes.OK);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
+	});
 }
 
 export default new ProductController();

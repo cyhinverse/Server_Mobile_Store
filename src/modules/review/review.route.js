@@ -1,11 +1,77 @@
-import express from 'express';
-import reviewController from './review.controller';
-const router = express.Router();
+import { Router } from 'express';
+import ReviewController from './review.controller.js';
+import { ReviewValidation } from './review.validation.js';
+import { validateData } from '../../middlewares/validation.js';
+import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
 
-router.post('/create', reviewController.createReview);
-router.put('/update', reviewController.updateReview);
-router.delete('/delete/:id', reviewController.deleteReview);
-router.get('/get/:id', reviewController.getReviewByUserId);
-router.get('/get/:id', reviewController.getReviews);
+
+
+const router = Router();
+
+// User routes (cần auth)
+router.post(
+	'/',
+	authMiddleware,
+	validateData(ReviewValidation.create),
+	ReviewController.createReview
+);
+
+router.get(
+	'/my-reviews',
+	authMiddleware,
+	ReviewController.getMyReviews
+);
+
+router.get(
+	'/:id',
+	authMiddleware,
+	validateData(ReviewValidation.mongoId, 'params'),
+	ReviewController.getReviewById
+);
+
+router.put(
+	'/:id',
+	authMiddleware,
+	validateData(ReviewValidation.mongoId, 'params'),
+	validateData(ReviewValidation.update),
+	ReviewController.updateReview
+);
+
+router.delete(
+	'/:id',
+	authMiddleware,
+	validateData(ReviewValidation.mongoId, 'params'),
+	ReviewController.deleteReview
+);
+
+// Product review routes (public)
+router.get(
+	'/product/:productId',
+	validateData(ReviewValidation.mongoId, 'params'),
+	ReviewController.getReviewsByProductId
+);
+
+router.get(
+	'/product/:productId/stats',
+	validateData(ReviewValidation.mongoId, 'params'),
+	ReviewController.getProductReviewStats
+);
+
+// Admin routes (cần auth + admin permission)
+router.get(
+	'/admin/all',
+	authMiddleware,
+	checkPermission(['admin']),
+	ReviewController.getAllReviews
+);
+
+router.get(
+	'/admin/user/:userId',
+	authMiddleware,
+	checkPermission(['admin']),
+	validateData(ReviewValidation.mongoId, 'params'),
+	ReviewController.getReviewsByUserId
+);
 
 export default router;

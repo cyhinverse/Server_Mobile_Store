@@ -1,38 +1,83 @@
 import express from 'express';
-import UserController from './user.controller.js';
+import userController from './user.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
+
 const router = express.Router();
 
+// Apply authentication to all routes
 router.use(authMiddleware);
 
-router.post('/', UserController.createUser);
-router.get('/:id', UserController.getUserById);
-router.patch('/:id', UserController.updateUser);
-router.delete('/:id', UserController.deleteUser);
-router.get('/', UserController.getAllUser);
-router.post('/:id/change-password', UserController.changePassword);
-router.post('/:id/reset-password', UserController.ResetPassword);
-router.post('/addresses', UserController.createAddress);
-router.delete('/addresses/delete', UserController.deleteAddress);
-router.put('/addresses/update', UserController.updateAddress);
-router.patch('/addresses/set-default', UserController.setDefaultAddress);
-router.get('/addresses/:addressId', UserController.getAddressById);
-router.get('/addresses/byuser', UserController.getAddressesByUser);
+/**
+ * USER MANAGEMENT ROUTES (Admin Only)
+ */
+// Create new user
+router.post('/', checkPermission(['admin']), userController.createUser);
 
-router.get(
-	'/:userId/addresses/default',
-	UserController.getDefaultAddressByUser
+// Get all users with pagination
+router.get('/', checkPermission(['admin']), userController.getAllUsers);
+
+// Get user by ID
+router.get('/:userId', checkPermission(['admin']), userController.getUserById);
+
+// Update user
+router.patch('/:userId', checkPermission(['admin']), userController.updateUser);
+
+// Delete user
+router.delete(
+	'/:userId',
+	checkPermission(['admin']),
+	userController.deleteUser
 );
 
-router.get('/admin', UserController.getAllUser);
-
-router.get('/admin/addresses', UserController.getAllAddresses);
-
-router.get('/admin/addresses/paginated', UserController.getAddressesPaginated);
-
+// Get user statistics
 router.get(
-	'/admin/:userId/addresses/count',
-	UserController.getAddressesCountByUser
+	'/admin/stats',
+	checkPermission(['admin']),
+	userController.getUserStats
+);
+
+/**
+ * ADDRESS MANAGEMENT ROUTES
+ */
+// Add address to user
+router.post('/:userId/addresses', userController.addAddress);
+
+// Update user address
+router.patch('/:userId/addresses/:addressId', userController.updateAddress);
+
+// Delete user address
+router.delete('/:userId/addresses/:addressId', userController.deleteAddress);
+
+// Set default address
+router.patch(
+	'/:userId/addresses/:addressId/default',
+	userController.setDefaultAddress
+);
+
+// Get user addresses
+router.get('/:userId/addresses', userController.getAddressesByUser);
+
+// Get address by ID
+router.get('/:userId/addresses/:addressId', userController.getAddressById);
+
+// Get default address
+router.get('/:userId/addresses/default/get', userController.getDefaultAddress);
+
+// Count addresses by user
+router.get(
+	'/:userId/addresses/count/total',
+	userController.countAddressesByUser
+);
+
+/**
+ * ADMIN ADDRESS ROUTES
+ */
+// Get all addresses with pagination (Admin only)
+router.get(
+	'/admin/addresses/paginated',
+	checkPermission(['admin']),
+	userController.getAllAddressesPaginated
 );
 
 export default router;

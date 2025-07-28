@@ -4,45 +4,60 @@ import NotificationValidation from './notification.validation.js';
 import { validateData } from '../../middlewares/validation.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
+
 const router = Router();
 
-// Middleware xác thực cho tất cả routes
-router.use(authMiddleware);
-
-// Routes cho user
+// Routes cho user (cần auth)
 router.get(
-	'/my-notifications',
+	'/',
+	authMiddleware,
 	validateData(NotificationValidation.getNotifications, 'query'),
 	notificationController.getUserNotifications
 );
 
-router.get('/unread-count', notificationController.getUnreadCount);
+router.get(
+	'/unread-count',
+	authMiddleware,
+	notificationController.getUnreadCount
+);
 
-router.get('/stats', notificationController.getNotificationStats);
+router.get(
+	'/stats',
+	authMiddleware,
+	notificationController.getNotificationStats
+);
 
 router.get(
 	'/:id',
+	authMiddleware,
 	validateData(NotificationValidation.mongoId, 'params'),
 	notificationController.getNotificationById
 );
 
 router.patch(
 	'/:id/read',
+	authMiddleware,
 	validateData(NotificationValidation.mongoId, 'params'),
 	notificationController.markAsRead
 );
 
-router.patch('/mark-all-read', notificationController.markAllAsRead);
+router.patch(
+	'/mark-all-read',
+	authMiddleware,
+	notificationController.markAllAsRead
+);
 
 router.delete(
 	'/:id',
+	authMiddleware,
 	validateData(NotificationValidation.mongoId, 'params'),
 	notificationController.deleteNotification
 );
 
-// Routes cho admin
+// Routes cho admin (cần auth + admin permission)
 router.post(
 	'/',
+	authMiddleware,
 	checkPermission(['admin']),
 	validateData(NotificationValidation.createNotification),
 	notificationController.createNotification
@@ -50,6 +65,7 @@ router.post(
 
 router.post(
 	'/system',
+	authMiddleware,
 	checkPermission(['admin']),
 	validateData(NotificationValidation.createSystemNotification),
 	notificationController.createSystemNotification
@@ -57,6 +73,7 @@ router.post(
 
 router.get(
 	'/type/:type',
+	authMiddleware,
 	checkPermission(['admin']),
 	validateData(NotificationValidation.getNotifications, 'query'),
 	notificationController.getNotificationsByType
@@ -64,6 +81,7 @@ router.get(
 
 router.delete(
 	'/cleanup/expired',
+	authMiddleware,
 	checkPermission(['admin']),
 	notificationController.cleanupExpiredNotifications
 );

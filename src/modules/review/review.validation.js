@@ -2,51 +2,66 @@ import Joi from 'joi';
 
 export const ReviewValidation = {
 	create: Joi.object({
-		userId: Joi.string().required().messages({
-			'string.empty': 'User ID is required!',
-		}),
-		productId: Joi.string().required().messages({
-			'string.empty': 'Product ID is required!',
-		}),
+		productId: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.required()
+			.messages({
+				'string.empty': 'Product ID is required!',
+				'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId!',
+			}),
 		rating: Joi.number().integer().min(1).max(5).required().messages({
 			'number.base': 'Rating must be a number!',
 			'number.min': 'Rating must be at least 1!',
 			'number.max': 'Rating must not exceed 5!',
-			'number.empty': 'Rating is required!',
+			'any.required': 'Rating is required!',
 		}),
-		comment: Joi.string().optional().allow('').messages({
-			'string.empty': 'Comment cannot be empty!',
+		comment: Joi.string().optional().allow('').max(1000).messages({
+			'string.max': 'Comment must not exceed 1000 characters!',
 		}),
 	}),
+
 	update: Joi.object({
-		userId: Joi.string().required().messages({
-			'string.empty': 'User ID is required!',
-		}),
-		productId: Joi.string().required().messages({
-			'string.empty': 'Product ID is required!',
-		}),
 		rating: Joi.number().integer().min(1).max(5).optional().messages({
 			'number.base': 'Rating must be a number!',
 			'number.min': 'Rating must be at least 1!',
 			'number.max': 'Rating must not exceed 5!',
 		}),
-		comment: Joi.string().optional().allow('').messages({
-			'string.empty': 'Comment cannot be empty!',
+		comment: Joi.string().optional().allow('').max(1000).messages({
+			'string.max': 'Comment must not exceed 1000 characters!',
 		}),
 	}),
-	delete: Joi.object({
-		userId: Joi.string().required().messages({
-			'string.empty': 'User ID is required!',
-		}),
+
+	mongoId: Joi.object({
+		id: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.required()
+			.messages({
+				'string.empty': 'ID is required!',
+				'string.pattern.base': 'ID must be a valid MongoDB ObjectId!',
+			}),
+		productId: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.optional()
+			.messages({
+				'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId!',
+			}),
+		userId: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.optional()
+			.messages({
+				'string.pattern.base': 'User ID must be a valid MongoDB ObjectId!',
+			}),
 	}),
-	getReviews: Joi.object({
-		productId: Joi.string().required().messages({
-			'string.empty': 'Product ID is required!',
-		}),
-	}),
-	getReviewById: Joi.object({
-		id: Joi.string().required().messages({
-			'string.empty': 'Review ID is required!',
-		}),
+
+	query: Joi.object({
+		page: Joi.number().integer().min(1).optional().default(1),
+		limit: Joi.number().integer().min(1).max(100).optional().default(10),
+		rating: Joi.number().integer().min(1).max(5).optional(),
+		productId: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.optional(),
+		userId: Joi.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.optional(),
 	}),
 };

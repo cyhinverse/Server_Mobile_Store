@@ -1,44 +1,25 @@
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../configs/catchAsync.js';
-import UserService from './user.service.js';
+import BaseController from '../../core/controller/base.controller.js';
+import userService from './user.service.js';
 import UserValidation from './user.validation.js';
 import {
-	formatError,
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
-import { comparePassword, hashPassword } from '../../utils/password.util.js';
-import { Token } from '../../utils/token.js';
-import BaseController from '../../core/controller/base.controller.js';
 
 class UserController extends BaseController {
 	constructor() {
-		super(UserService);
-		if (!UserController.instance) return UserController.instance;
-		UserController.instance = this;
+		super(userService);
+		this.userService = userService;
 	}
+
+	/**
+	 * Create new user (Admin function)
+	 */
 	createUser = catchAsync(async (req, res) => {
-		const { fullName, email, password, roles } = req.body;
-		console.log('req.body', req.body);
-
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail({
-				res,
-				message: 'User data is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (!fullName || !email || !password || !roles) {
-			return formatFail({
-				res,
-				message: 'All fields are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
+		// Validation
 		const { error } = UserValidation.createUserValidation.validate(req.body);
-
 		if (error) {
 			return formatFail({
 				res,
@@ -47,297 +28,141 @@ class UserController extends BaseController {
 			});
 		}
 
-		const hashedPassword = await hashPassword(password);
-		const userData = {
-			fullName,
-			email,
-			password: hashedPassword,
-			roles,
-		};
-
-		const newUser = await UserService.createUser(userData);
-		if (!newUser) {
-			return formatError({
-				res,
-				message: 'Failed to create user',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
+		const user = await this.userService.createUser(req.body);
 
 		return formatSuccess({
 			res,
+			data: user,
 			message: 'User created successfully',
-			data: { user: newUser },
 			code: StatusCodes.CREATED,
 		});
 	});
-	updateUser = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { dataUser } = req.body;
 
-		if (!id) {
+	/**
+	 * Get all users with pagination
+	 */
+	getAllUsers = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10, search, role } = req.query;
+
+		// Validation
+		const { error } = UserValidation.getUsersPaginatedValidation.validate(
+			req.query
+		);
+		if (error) {
 			return formatFail({
 				res,
-				message: 'User ID is required',
+				message: error.details[0].message,
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail({
-				res,
-				message: 'Update data is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const updatedData = await UserService.updateUser(id, dataUser);
-		if (!updatedData) {
-			return formatFail({
-				res,
-				message: 'User not found or update failed',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+		const result = await this.userService.getUsersPaginated({
+			page: parseInt(page),
+			limit: parseInt(limit),
+			search,
+			role,
+		});
 
 		return formatSuccess({
 			res,
-			message: 'User updated successfully',
-			data: { user: updatedData },
+			data: result,
+			message: 'Users retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
-	deleteUser = catchAsync(async (req, res) => {
-		const { id } = req.params;
 
-		// Validate input data
-		if (!id) {
+	/**
+	 * Get user by ID
+	 */
+	getUserById = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.getUserByIdValidation.validate({ userId });
+		if (error) {
 			return formatFail({
 				res,
-				message: 'User ID is required',
+				message: error.details[0].message,
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		const user = await UserService.findById(id);
-		if (!user) {
-			return formatFail({
-				res,
-				message: 'User not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		await UserService.deleteUser(id);
+		const user = await this.userService.getUserById(userId);
 
 		return formatSuccess({
 			res,
+			data: user,
+			message: 'User retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Update user
+	 */
+	updateUser = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.updateUserValidation.validate({
+			userId,
+			...req.body,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const user = await this.userService.updateUser(userId, req.body);
+
+		return formatSuccess({
+			res,
+			data: user,
+			message: 'User updated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Delete user
+	 */
+	deleteUser = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.deleteUserValidation.validate({ userId });
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		await this.userService.deleteUser(userId);
+
+		return formatSuccess({
+			res,
+			data: null,
 			message: 'User deleted successfully',
 			code: StatusCodes.OK,
 		});
 	});
-	getUserById = catchAsync(async (req, res) => {
-		const { id } = req.params;
 
-		// Validate input data
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'User ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
+	/**
+	 * Add address to user
+	 */
+	addAddress = catchAsync(async (req, res) => {
+		const { userId } = req.params;
 
-		const user = await UserService.findById(id);
-		if (!user) {
-			return formatFail({
-				res,
-				message: 'User not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			message: 'User found successfully',
-			data: { user },
-			code: StatusCodes.OK,
+		// Validation
+		const { error } = UserValidation.addAddressValidation.validate({
+			userId,
+			...req.body,
 		});
-	});
-	getAllUser = catchAsync(async (req, res) => {
-		const users = await UserService.findAll();
-		if (!users || users.length === 0) {
-			return formatFail(res, 'No users found', StatusCodes.NOT_FOUND);
-		}
-
-		return formatSuccess({
-			res,
-			message: 'Users found successfully',
-			data: { users },
-			code: StatusCodes.OK,
-		});
-	});
-	changePassword = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { password, newPassword } = req.body;
-
-		// Validate input data
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'User ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (!password || !newPassword) {
-			return formatFail({
-				res,
-				message: 'Current password and new password are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const user = await UserService.findById(id);
-		if (!user) {
-			return formatFail({
-				res,
-				message: 'User not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		const isPasswordValid = await comparePassword(password, user.password);
-		if (!isPasswordValid) {
-			return formatFail({
-				res,
-				message: 'Invalid password',
-				code: StatusCodes.UNAUTHORIZED,
-			});
-		}
-
-		const hashedPassword = await hashPassword(newPassword);
-		if (!hashedPassword) {
-			return formatError({
-				res,
-				message: 'Failed to hash new password',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-		const updatedUser = await UserService.updateUser(id, {
-			password: hashedPassword,
-		});
-		if (!updatedUser) {
-			return formatError({
-				res,
-				message: 'Failed to change password',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			message: 'Password changed successfully',
-			data: {},
-			code: StatusCodes.OK,
-		});
-	});
-	ResetPassword = catchAsync(async (req, res) => {
-		const { email } = req.body;
-
-		// Validate input data
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail({
-				res,
-				message: 'Email is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (!email) {
-			return formatFail({
-				res,
-				message: 'Email is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const user = await UserService.findEmail(email);
-		if (!user) {
-			return formatFail({
-				res,
-				message: 'User not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		const resetToken = await Token.generateResetToken(user);
-		if (!resetToken || resetToken === 'undefined') {
-			return formatError({
-				res,
-				message: 'Failed to generate reset token',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			message: 'Reset token generated successfully',
-			data: { resetToken },
-			code: StatusCodes.OK,
-		});
-	});
-	createAddress = catchAsync(async (req, res) => {
-		const { _id } = req.user;
-
-		const {
-			fullName,
-			phoneNumber,
-			province,
-			district,
-			ward,
-			street,
-			isDefault,
-			note,
-		} = req.body;
-
-		// Validate input data
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail({
-				res,
-				message: 'Address data is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (
-			!fullName ||
-			!phoneNumber ||
-			!province ||
-			!district ||
-			!ward ||
-			!street
-		) {
-			return formatFail({
-				res,
-				message: 'All required fields must be provided!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const validationAddress = UserValidation.createAddress;
-		const { error } = validationAddress.validate({
-			user: _id,
-			fullName,
-			phoneNumber,
-			province,
-			district,
-			ward,
-			street,
-			isDefault,
-			note,
-		});
-
 		if (error) {
 			return formatFail({
 				res,
@@ -346,106 +171,27 @@ class UserController extends BaseController {
 			});
 		}
 
-		const newAddress = await UserService.addAddress(_id, {
-			fullName,
-			phoneNumber,
-			province,
-			district,
-			ward,
-			street,
-			isDefault,
-			note,
-		});
-
-		if (!newAddress) {
-			return formatError({
-				res,
-				message: 'Failed to create address',
-				code: StatusCodes.INTERNAL_SERVER_ERROR,
-			});
-		}
+		const address = await this.userService.addAddress(userId, req.body);
 
 		return formatSuccess({
 			res,
-			message: 'Address created successfully',
-			data: { address: newAddress },
+			data: address,
+			message: 'Address added successfully',
 			code: StatusCodes.CREATED,
 		});
 	});
-	deleteAddress = catchAsync(async (req, res) => {
-		const userId = req.user._id;
-		const { idAddre } = req.body;
 
-		if (!idAddre || idAddre === 'undefined') {
-			return formatFail({
-				res,
-				message: 'Address ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		// Validate dữ liệu
-		const { error } = UserValidation.deleteAddress.validate({
-			_id: userId,
-			idAddre,
-		});
-
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		// Gọi service
-		const deletedAddress = await UserService.deleteAddress(userId, idAddre);
-
-		if (!deletedAddress) {
-			return formatFail({
-				res,
-				message: 'Address not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			message: 'Address deleted successfully',
-			data: { address: deletedAddress },
-			code: StatusCodes.OK,
-		});
-	});
+	/**
+	 * Update user address
+	 */
 	updateAddress = catchAsync(async (req, res) => {
-		const userId = req.user._id;
-		const {
-			idAddre,
-			fullName,
-			phoneNumber,
-			province,
-			district,
-			ward,
-			street,
-			isDefault,
-			note,
-		} = req.body;
+		const { userId, addressId } = req.params;
 
-		if (!idAddre) {
-			return formatFail({
-				res,
-				message: 'Address ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		const { error } = UserValidation.updateAddress.validate({
-			fullName,
-			phoneNumber,
-			province,
-			district,
-			ward,
-			street,
-			isDefault,
-			note,
+		// Validation
+		const { error } = UserValidation.updateAddressValidation.validate({
+			userId,
+			addressId,
+			...req.body,
 		});
 		if (error) {
 			return formatFail({
@@ -455,71 +201,31 @@ class UserController extends BaseController {
 			});
 		}
 
-		const updateData = {
-			...(fullName && { fullName }),
-			...(phoneNumber && { phoneNumber }),
-			...(province && { province }),
-			...(district && { district }),
-			...(ward && { ward }),
-			...(street && { street }),
-			...(note && { note }),
-			...(typeof isDefault === 'boolean' && { isDefault }),
-		};
-
-		const updatedAddress = await UserService.updateAddress(
+		const address = await this.userService.updateAddress(
 			userId,
-			idAddre,
-			updateData
+			addressId,
+			req.body
 		);
-
-		if (!updatedAddress) {
-			return formatFail({
-				res,
-				message: 'Address not found or update failed',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
 
 		return formatSuccess({
 			res,
+			data: address,
 			message: 'Address updated successfully',
-			data: { address: updatedAddress },
 			code: StatusCodes.OK,
 		});
 	});
-	getAllAddresses = catchAsync(async (req, res) => {
-		const addresses = await UserService.getAllAddresses();
-		if (!addresses || addresses.length === 0) {
-			return formatFail(res, 'No addresses found', StatusCodes.NOT_FOUND);
-		}
 
-		return formatSuccess(
-			res,
-			'Addresses retrieved successfully',
-			{ data: addresses },
-			StatusCodes.OK
-		);
-	});
-	getAddressById = catchAsync(async (req, res) => {
-		const userId = req.user._id;
-		const { addressId } = req.params;
+	/**
+	 * Delete user address
+	 */
+	deleteAddress = catchAsync(async (req, res) => {
+		const { userId, addressId } = req.params;
 
-		console.log(
-			`Fetching address for userId: ${userId}, addressId: ${addressId}`
-		);
-
-		// Validate input data
-		if (!addressId || addressId === 'undefined') {
-			return formatFail({
-				res,
-				message: 'Address ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const validationAddress = UserValidation.getAddressById;
-		const { error } = validationAddress.validate({ userId, addressId });
-
+		// Validation
+		const { error } = UserValidation.deleteAddressValidation.validate({
+			userId,
+			addressId,
+		});
 		if (error) {
 			return formatFail({
 				res,
@@ -528,142 +234,27 @@ class UserController extends BaseController {
 			});
 		}
 
-		const address = await UserService.getAddressById(userId, addressId);
-		if (!address) {
-			return formatFail({
-				res,
-				message: 'Address not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+		await this.userService.deleteAddress(userId, addressId);
 
 		return formatSuccess({
 			res,
-			message: 'Address retrieved successfully',
-			data: { address },
+			data: null,
+			message: 'Address deleted successfully',
 			code: StatusCodes.OK,
 		});
 	});
-	getAddressesByUser = catchAsync(async (req, res) => {
-		const userId = req.user._id;
 
-		// Validate input data
-		if (!userId) {
-			return formatFail({
-				res,
-				message: 'User ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const validationAddress = UserValidation.getAddressesByUser;
-		const { error } = validationAddress.validate({ userId });
-
-		if (error) {
-			return formatFail({
-				res,
-				message: error.details[0].message,
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const addresses = await UserService.getAddressesByUser(userId);
-		if (!addresses || addresses.length === 0) {
-			return formatFail({
-				res,
-				message: 'No addresses found for this user',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			message: 'Addresses retrieved successfully',
-			data: { addresses },
-			code: StatusCodes.OK,
-		});
-	});
-	getDefaultAddressByUser = catchAsync(async (req, res) => {
-		const { userId } = req.params;
-
-		// Validate input data
-		if (!userId || userId === 'undefined') {
-			return formatFail(res, 'User ID is required!', StatusCodes.BAD_REQUEST);
-		}
-
-		const address = await UserService.getDefaultAddressByUser(userId);
-		if (!address) {
-			return formatFail(
-				res,
-				'Default address not found for this user',
-				StatusCodes.NOT_FOUND
-			);
-		}
-
-		return formatSuccess(
-			res,
-			'Default address retrieved successfully',
-			{ data: address },
-			StatusCodes.OK
-		);
-	});
-	getAddressesPaginated = catchAsync(async (req, res) => {
-		const { page = 1, limit = 10, search = '', userId } = req.query;
-
-		const validationAddress = UserValidation.getAddressesPaginated;
-		const { error } = validationAddress.validate({
-			page: Number(page),
-			limit: Number(limit),
-			search,
-			userId,
-		});
-
-		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
-		}
-
-		const result = await UserService.getAddressesPaginated({
-			page: Number(page),
-			limit: Number(limit),
-			search,
-			userId,
-		});
-
-		if (!result || !result.data || result.data.length === 0) {
-			return formatFail(res, 'No addresses found', StatusCodes.NOT_FOUND);
-		}
-
-		return formatSuccess(
-			res,
-			'Addresses retrieved successfully',
-			result,
-			StatusCodes.OK
-		);
-	});
+	/**
+	 * Set default address
+	 */
 	setDefaultAddress = catchAsync(async (req, res) => {
-		const userId = req.user._id;
-		const { addressId } = req.body;
+		const { userId, addressId } = req.params;
 
-		// Validate input data
-		if (!userId || addressId === 'undefined') {
-			return formatFail(
-				res,
-				'Address ID is required!',
-				StatusCodes.BAD_REQUEST
-			);
-		}
-
-		if (!userId) {
-			return formatFail({
-				res,
-				message: 'User ID is required!',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const validationAddress = UserValidation.setDefaultAddress;
-		const { error } = validationAddress.validate({ userId, addressId });
-
+		// Validation
+		const { error } = UserValidation.setDefaultAddressValidation.validate({
+			userId,
+			addressId,
+		});
 		if (error) {
 			return formatFail({
 				res,
@@ -672,45 +263,172 @@ class UserController extends BaseController {
 			});
 		}
 
-		const address = await UserService.setDefaultAddress(userId, addressId);
-		if (!address) {
-			return formatFail({
-				res,
-				message: 'Address not found or update failed',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
+		const address = await this.userService.setDefaultAddress(userId, addressId);
 
 		return formatSuccess({
 			res,
+			data: address,
 			message: 'Default address set successfully',
-			data: { address },
 			code: StatusCodes.OK,
 		});
 	});
-	getAddressesCountByUser = catchAsync(async (req, res) => {
+
+	/**
+	 * Get user addresses
+	 */
+	getAddressesByUser = catchAsync(async (req, res) => {
 		const { userId } = req.params;
 
-		// Validate input data
-		if (!userId || userId === 'undefined') {
-			return formatFail(res, 'User ID is required!', StatusCodes.BAD_REQUEST);
-		}
-
-		const count = await UserService.getAddressesCountByUser(userId);
-		if (count === null || count === undefined) {
-			return formatError(
+		// Validation
+		const { error } = UserValidation.getUserAddressesValidation.validate({
+			userId,
+		});
+		if (error) {
+			return formatFail({
 				res,
-				'Failed to get address count',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		return formatSuccess(
+		const addresses = await this.userService.getAddressesByUser(userId);
+
+		return formatSuccess({
 			res,
-			'Address count retrieved successfully',
-			{ data: { count } },
-			StatusCodes.OK
+			data: addresses,
+			message: 'User addresses retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get address by ID
+	 */
+	getAddressById = catchAsync(async (req, res) => {
+		const { userId, addressId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.getAddressByIdValidation.validate({
+			userId,
+			addressId,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const address = await this.userService.getAddressById(userId, addressId);
+
+		return formatSuccess({
+			res,
+			data: address,
+			message: 'Address retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get default address
+	 */
+	getDefaultAddress = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.getDefaultAddressValidation.validate({
+			userId,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const address = await this.userService.getDefaultAddress(userId);
+
+		return formatSuccess({
+			res,
+			data: address,
+			message: 'Default address retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get all addresses with pagination (Admin function)
+	 */
+	getAllAddressesPaginated = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10 } = req.query;
+
+		// Validation
+		const { error } = UserValidation.getAddressesPaginatedValidation.validate(
+			req.query
 		);
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const result = await this.userService.getAllAddressesPaginated({
+			page: parseInt(page),
+			limit: parseInt(limit),
+		});
+
+		return formatSuccess({
+			res,
+			data: result,
+			message: 'Addresses retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Count addresses by user
+	 */
+	countAddressesByUser = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.countAddressesByUserValidation.validate({
+			userId,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const count = await this.userService.countAddressesByUser(userId);
+
+		return formatSuccess({
+			res,
+			data: { count },
+			message: 'Address count retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get user statistics (Admin function)
+	 */
+	getUserStats = catchAsync(async (req, res) => {
+		const stats = await this.userService.getUserStats();
+
+		return formatSuccess({
+			res,
+			data: stats,
+			message: 'User statistics retrieved successfully',
+			code: StatusCodes.OK,
+		});
 	});
 }
 

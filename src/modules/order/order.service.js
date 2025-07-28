@@ -1,202 +1,259 @@
-import Order from './order.model.js';
-import UserService from '../user/user.service.js';
-import ProductService from '../product/product.service.js';
-import VariantService from '../variant/variant.service.js';
-import DiscountService from '../discount/discount.service.js';
+import orderRepository from './order.repository.js';
+
 class OrderService {
 	constructor() {
-		if (!OrderService.instance) return OrderService.instance;
-		this.Order = Order;
-		this.userService = UserService;
-		this.productService = ProductService;
+		if (OrderService.instance) return OrderService.instance;
+		this.orderRepo = orderRepository;
 		OrderService.instance = this;
 	}
 
-	async createOrder(
-		userId,
-		variant_id,
-		payment_id,
-		name,
-		image,
-		color,
-		storage,
-		quantity,
-		status,
-		note,
-		payment_method,
-		discountCode
-	) {
-		const user = await UserService.getUserById(userId);
-		if (!user) throw new Error('User not found');
+	// Create new order
+	async createOrder(orderData) {
+		if (!orderData) {
+			throw new Error('Order data is required');
+		}
 
-		const variant = await VariantService.checkAndUpdateStock(
-			variant_id,
-			quantity
-		);
+		const { userId, products, totalPrice, paymentMethod = 'cod', note = '', paymentId } = orderData;
 
-		const originalPrice = variant.price;
+		if (!userId || !products || !Array.isArray(products) || products.length === 0) {
+			throw new Error('User ID and products are required');
+		}
 
-		const { discountedPrice, appliedDiscountCode } =
-			await DiscountService.applyDiscount({ originalPrice, discountCode });
+		if (!totalPrice || totalPrice <= 0) {
+			throw new Error('Valid total price is required');
+		}
 
-		const totalPrice = quantity * discountedPrice;
-		if (totalPrice < 0) throw new Error('Invalid total price');
-
-		// Tạo đơn hàng
-		const order = await Order.create({
+		const processedData = {
 			user_id: userId,
-			payment_id,
-			payment_method,
-			note,
-			status,
-			products: [
-				{
-					variant_id,
-					name,
-					image,
-					color,
-					storage,
-					quantity,
-					price: {
-						originalPrice,
-						discountedPrice,
-						discountCode: appliedDiscountCode,
-					},
-				},
-			],
+			payment_id: paymentId,
+			products: products.map(product => ({
+				variant_id: product.variantId,
+				name: product.name,
+				image: product.image,
+				color: product.color || '',
+				storage: product.storage || '',
+				quantity: product.quantity,
+				price: {
+					originalPrice: product.originalPrice,
+					discountedPrice: product.discountedPrice || product.originalPrice,
+					discountCode: product.discountCode || ''
+				}
+			})),
 			totalPrice,
-		});
-		// Cập nhật tồn kho
-		variant.stock -= quantity;
-		await variant.save();
-
-		return {
-			order,
-			user: {
-				username: user.fullName,
-				email: user.email,
-				phone_number: user.phoneNumber,
-				address: user.address,
-			},
+			status: 'pending',
+			note,
+			payment_method: paymentMethod,
+			createdAt: new Date()
 		};
-	}
-	async deleteOrder(orderId) {
-		if (!orderId) {
-			throw new Error('OrderId is require');
-		}
-		const deleteOrder = await this.Order.findByIdAndDelete(orderId);
-		if (!deleteOrder) {
-			throw new Error('Can not delete this Order');
-		}
-		return deleteOrder;
-	}
-	async updateStatus(orderId, status) {
-		if (!orderId) {
-			throw new Error('Order id is require!');
-		}
-		if (!status) {
-			throw new Error('Status is require!');
-		}
-		const allowStatus = ['pending', 'completed', 'cancelled'];
-		if (!allowStatus.includes(status)) {
-			throw new Error('Invalid status');
+
+		const result = await this.orderRepo.create(processedData);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to create order');
 		}
 
-		const updateStatus = await this.Order.findByIdAndUpdate(
-			orderId,
-			{ status },
-			{ new: true }
-		);
+		return result.data;
+	}
 
-		if (!updateStatus) {
-			throw new Error('Updated error !');
-		}
-
-		return updateStatus;
-	}
-	async updateNote(userId, note) {
-		if (!userId || !note) {
-			throw new Error('UserId and note are required');
-		}
-		const order = await this.Order.findOneAndUpdate(
-			{ user_id: userId },
-			{ note },
-			{ new: true }
-		);
-		if (!order) {
-			throw new Error('Order not found');
-		}
-		return order;
-	}
-	async cancelOrder(orderId) {
-		if (!orderId) {
-			throw new Error('OrderId is required');
-		}
-		const order = await this.Order.findById(orderId);
-		if (!order) {
-			throw new Error('Order not found');
-		}
-		if (order.status !== 'pending') {
-			throw new Error('Only pending orders can be cancelled');
-		}
-		order.status = 'cancelled';
-		await order.save();
-		return order;
-	}
+	// Get order by ID
 	async getOrderById(orderId) {
 		if (!orderId) {
-			throw new Error('OrderId is required');
+			throw new Error('Order ID is required');
 		}
-		const order = await this.Order.findById(orderId);
-		if (!order) {
+
+		const result = await this.orderRepo.findById(orderId);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to get order');
+		}
+
+		if (!result.data) {
 			throw new Error('Order not found');
 		}
-		return order;
+
+		return result.data;
 	}
-	async getOrderByUserId(userId) {
+
+	// Get orders by user ID
+	async getOrdersByUserId(userId, options = {}) {
 		if (!userId) {
-			throw new Error('UserId is required');
+			throw new Error('User ID is required');
 		}
-		const orders = await this.Order.find({ user_id: userId });
-		if (!orders || orders.length === 0) {
-			throw new Error('No orders found for this user');
+
+		const result = await this.orderRepo.getOrdersByUserId(userId, options);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to get user orders');
 		}
-		return orders;
+
+		return result;
 	}
-	async getAllOrders() {
-		const orders = await this.Order.find();
-		if (!orders || orders.length === 0) {
-			throw new Error('No orders found');
+
+	// Get all orders with filters
+	async getAllOrders(filters = {}, options = {}) {
+		const result = await this.orderRepo.getAllOrdersWithFilters(filters, options);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to get orders');
 		}
-		return orders;
+
+		return result;
 	}
-	async getOrdersByStatus(status) {
+
+	// Get orders by status
+	async getOrdersByStatus(status, options = {}) {
 		if (!status) {
 			throw new Error('Status is required');
 		}
-		const allowStatus = ['pending', 'completed', 'cancelled'];
-		if (!allowStatus.includes(status)) {
-			throw new Error('Invalid status');
+
+		const validStatuses = ['pending', 'completed', 'cancelled'];
+		if (!validStatuses.includes(status)) {
+			throw new Error('Invalid status. Must be: pending, completed, or cancelled');
 		}
-		const orders = await this.Order.find({ status });
-		if (!orders || orders.length === 0) {
-			throw new Error(`No orders found with status: ${status}`);
+
+		const result = await this.orderRepo.getOrdersByStatus(status, options);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to get orders by status');
 		}
-		return orders;
+
+		return result;
 	}
-	async updatePayementMethod(orderId, paymentMethod) {
+
+	// Update order status
+	async updateOrderStatus(orderId, status) {
+		if (!orderId || !status) {
+			throw new Error('Order ID and status are required');
+		}
+
+		const validStatuses = ['pending', 'completed', 'cancelled'];
+		if (!validStatuses.includes(status)) {
+			throw new Error('Invalid status. Must be: pending, completed, or cancelled');
+		}
+
+		const result = await this.orderRepo.updateOrderStatus(orderId, status);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to update order status');
+		}
+
+		return result.data;
+	}
+
+	// Update order note
+	async updateOrderNote(orderId, note) {
+		if (!orderId) {
+			throw new Error('Order ID is required');
+		}
+
+		const result = await this.orderRepo.updateOrderNote(orderId, note || '');
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to update order note');
+		}
+
+		return result.data;
+	}
+
+	// Update payment method
+	async updatePaymentMethod(orderId, paymentMethod) {
 		if (!orderId || !paymentMethod) {
-			throw new Error('OrderId and paymentMethod are required');
+			throw new Error('Order ID and payment method are required');
 		}
-		const order = await this.Order.findByIdAndUpdate(
-			orderId,
-			{ payment_method: paymentMethod },
-			{ new: true }
-		);
-		if (!order) {
-			throw new Error('Order not found or could not be updated');
+
+		const validMethods = ['cod', 'banking', 'vnpay'];
+		if (!validMethods.includes(paymentMethod)) {
+			throw new Error('Invalid payment method. Must be: cod, banking, or vnpay');
 		}
-		return order;
+
+		const result = await this.orderRepo.updatePaymentMethod(orderId, paymentMethod);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to update payment method');
+		}
+
+		return result.data;
+	}
+
+	// Cancel order
+	async cancelOrder(orderId) {
+		if (!orderId) {
+			throw new Error('Order ID is required');
+		}
+
+		// Check if order exists and is cancellable
+		const order = await this.getOrderById(orderId);
+		if (order.status === 'completed') {
+			throw new Error('Cannot cancel completed order');
+		}
+
+		if (order.status === 'cancelled') {
+			throw new Error('Order is already cancelled');
+		}
+
+		const result = await this.orderRepo.cancelOrder(orderId);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to cancel order');
+		}
+
+		return result.data;
+	}
+
+	// Delete order (hard delete)
+	async deleteOrder(orderId) {
+		if (!orderId) {
+			throw new Error('Order ID is required');
+		}
+
+		const result = await this.orderRepo.delete(orderId);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to delete order');
+		}
+
+		return result.data;
+	}
+
+	// Get order statistics
+	async getOrderStats() {
+		return await this.orderRepo.getOrderStats();
+	}
+
+	// Get orders by date range
+	async getOrdersByDateRange(startDate, endDate, options = {}) {
+		if (!startDate || !endDate) {
+			throw new Error('Start date and end date are required');
+		}
+
+		const start = new Date(startDate);
+		const end = new Date(endDate);
+
+		if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+			throw new Error('Invalid date format');
+		}
+
+		if (start > end) {
+			throw new Error('Start date must be before end date');
+		}
+
+		const result = await this.orderRepo.getOrdersByDateRange(startDate, endDate, options);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to get orders by date range');
+		}
+
+		return result;
+	}
+
+	// Update entire order
+	async updateOrder(orderId, updateData) {
+		if (!orderId) {
+			throw new Error('Order ID is required');
+		}
+
+		if (!updateData || Object.keys(updateData).length === 0) {
+			throw new Error('Update data is required');
+		}
+
+		// Add updatedAt timestamp
+		updateData.updatedAt = new Date();
+
+		const result = await this.orderRepo.update(orderId, updateData);
+		if (!result.success) {
+			throw new Error(result.error || 'Failed to update order');
+		}
+
+		return result.data;
 	}
 }
 

@@ -16,11 +16,14 @@ class WishListController {
 
 	// Add product to wishlist
 	addToWishlist = catchAsync(async (req, res) => {
-		const { error, value } = WishListValidation.addToWishlist.validate(req.body, {
-			abortEarly: false,
-			allowUnknown: false,
-			stripUnknown: true,
-		});
+		const { error, value } = WishListValidation.addToWishlist.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -56,16 +59,15 @@ class WishListController {
 		const { productId } = req.params;
 
 		if (!productId) {
-			return formatFail(
-				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
 		try {
 			const userId = req.user.id;
-			const wishlist = await WishlistService.removeFromWishlist(userId, productId);
+			const wishlist = await WishlistService.removeFromWishlist(
+				userId,
+				productId
+			);
 			return formatSuccess(
 				res,
 				'Product removed from wishlist successfully',
@@ -117,11 +119,14 @@ class WishListController {
 
 	// Toggle product in wishlist (add if not exists, remove if exists)
 	toggleProductInWishlist = catchAsync(async (req, res) => {
-		const { error, value } = WishListValidation.addToWishlist.validate(req.body, {
-			abortEarly: false,
-			allowUnknown: false,
-			stripUnknown: true,
-		});
+		const { error, value } = WishListValidation.addToWishlist.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -137,7 +142,10 @@ class WishListController {
 			const userId = req.user.id;
 			const { productId } = value;
 
-			const wishlist = await WishlistService.toggleProductInWishlist(userId, productId);
+			const wishlist = await WishlistService.toggleProductInWishlist(
+				userId,
+				productId
+			);
 			return formatSuccess(
 				res,
 				'Wishlist updated successfully',
@@ -154,16 +162,15 @@ class WishListController {
 		const { productId } = req.params;
 
 		if (!productId) {
-			return formatFail(
-				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
 		try {
 			const userId = req.user.id;
-			const isInWishlist = await WishlistService.isProductInWishlist(userId, productId);
+			const isInWishlist = await WishlistService.isProductInWishlist(
+				userId,
+				productId
+			);
 			return formatSuccess(
 				res,
 				'Product wishlist status retrieved successfully',

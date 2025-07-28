@@ -441,6 +441,189 @@ class ProductService {
 
 		return variant;
 	}
+
+	// Statistics
+	async getProductStats() {
+		const totalProducts = await this.productRepo.countDocuments({});
+		const activeProducts = await this.productRepo.countDocuments({
+			status: 'active',
+		});
+		const inactiveProducts = await this.productRepo.countDocuments({
+			status: 'inactive',
+		});
+		const featuredProducts = await this.productRepo.countDocuments({
+			isFeatured: true,
+		});
+
+		return {
+			totalProducts,
+			activeProducts,
+			inactiveProducts,
+			featuredProducts,
+		};
+	}
+
+	// Pagination
+	async getProductsPaginated(options) {
+		const { page, limit, sort, order } = options;
+		const skip = (page - 1) * limit;
+
+		const sortObj = {};
+		sortObj[sort] = order === 'desc' ? -1 : 1;
+
+		const products = await this.productRepo.findAll(
+			{},
+			{
+				skip,
+				limit,
+				sort: sortObj,
+			}
+		);
+
+		const total = await this.productRepo.countDocuments({});
+
+		return {
+			data: products.data,
+			pagination: {
+				page,
+				limit,
+				total,
+				pages: Math.ceil(total / limit),
+			},
+		};
+	}
+
+	// Category filtering
+	async getProductsByCategory(categoryId, options = {}) {
+		const { page = 1, limit = 10 } = options;
+		const skip = (page - 1) * limit;
+
+		const products = await this.productRepo.findAll(
+			{ categoryId },
+			{ skip, limit, sort: { createdAt: -1 } }
+		);
+
+		const total = await this.productRepo.countDocuments({ categoryId });
+
+		return {
+			data: products.data,
+			pagination: {
+				page,
+				limit,
+				total,
+				pages: Math.ceil(total / limit),
+			},
+		};
+	}
+
+	// Featured products
+	async getFeaturedProducts(limit = 10) {
+		const products = await this.productRepo.findAll(
+			{ isFeatured: true, status: 'active' },
+			{ limit, sort: { createdAt: -1 } }
+		);
+		return products.data;
+	}
+
+	// Newest products
+	async getNewestProducts(limit = 10) {
+		const products = await this.productRepo.findAll(
+			{ status: 'active' },
+			{ limit, sort: { createdAt: -1 } }
+		);
+		return products.data;
+	}
+
+	// Popular products
+	async getPopularProducts(limit = 10) {
+		const products = await this.productRepo.findAll(
+			{ status: 'active' },
+			{ limit, sort: { sold: -1, views: -1 } }
+		);
+		return products.data;
+	}
+
+	// Get product by slug
+	async getProductBySlug(slug) {
+		const products = await this.productRepo.findAll({ slug });
+		return products.data.length > 0 ? products.data[0] : null;
+	}
+
+	// Product reviews (placeholder - you might need a separate review model)
+	async getProductReviews(productId, options = {}) {
+		// This is a placeholder implementation
+		// You would typically have a separate Review model/collection
+		const { page = 1, limit = 10 } = options;
+
+		// For now, return empty result
+		return {
+			data: [],
+			pagination: {
+				page,
+				limit,
+				total: 0,
+				pages: 0,
+			},
+		};
+	}
+
+	async addProductReview(reviewData) {
+		// This is a placeholder implementation
+		// You would typically have a separate Review model/collection
+		// For now, just return the review data with an ID
+		return {
+			...reviewData,
+			_id: new Date().getTime().toString(),
+			createdAt: new Date(),
+		};
+	}
+
+	// Product images
+	async addProductImages(productId, images) {
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		// Process images and add their paths to the product
+		const imagePaths = images.map((image) => ({
+			_id: new Date().getTime().toString() + Math.random(),
+			path: image.path,
+			filename: image.filename,
+			originalname: image.originalname,
+		}));
+
+		const currentImages = product.images || [];
+		const updatedImages = [...currentImages, ...imagePaths];
+
+		await this.productRepo.update(productId, {
+			images: updatedImages,
+			updatedAt: new Date(),
+		});
+
+		return imagePaths;
+	}
+
+	async deleteProductImage(productId, imageId) {
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		const images = product.images || [];
+		const updatedImages = images.filter((img) => img._id !== imageId);
+
+		if (images.length === updatedImages.length) {
+			throw new Error('Image not found');
+		}
+
+		await this.productRepo.update(productId, {
+			images: updatedImages,
+			updatedAt: new Date(),
+		});
+
+		return true;
+	}
 }
 
 export default new ProductService();
