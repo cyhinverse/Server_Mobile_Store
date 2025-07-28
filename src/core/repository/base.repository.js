@@ -1,6 +1,6 @@
 'use strict';
 import bcrypt from 'bcrypt';
-import { getPaginationMeta } from '../../shared/response/pagination';
+import { getPaginationMeta } from '../../shared/response/pagination.js';
 class BaseRepository {
 	constructor(model) {
 		if (!model) {

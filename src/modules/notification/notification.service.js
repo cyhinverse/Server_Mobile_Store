@@ -2,11 +2,6 @@ import BaseService from '../../core/service/base.service.js';
 import notificationRepository from './notification.repository.js';
 import { emitCreateNotification } from '../../events/notification.event.js';
 
-/**
- * Notification Service - Business Logic Layer
- * Handles all business rules, validation, and data processing
- * No direct database access - uses Repository layer
- */
 class NotificationService extends BaseService {
 	constructor() {
 		super(notificationRepository);
@@ -67,7 +62,7 @@ class NotificationService extends BaseService {
 	async createNotification(data) {
 		// Validate required fields
 		const { userId, type, title, content } = data;
-		
+
 		if (!userId || !type || !title || !content) {
 			const error = new Error('User ID, type, title and content are required');
 			error.statusCode = 400;
@@ -125,7 +120,10 @@ class NotificationService extends BaseService {
 			throw error;
 		}
 
-		const notificationContent = this._buildOrderNotificationContent(orderStatus, orderData);
+		const notificationContent = this._buildOrderNotificationContent(
+			orderStatus,
+			orderData
+		);
 
 		return await this.createNotification({
 			userId,
@@ -148,7 +146,9 @@ class NotificationService extends BaseService {
 	 */
 	async createPromotionNotification(userId, promotionId, promotionData) {
 		if (!userId || !promotionId || !promotionData) {
-			const error = new Error('All promotion notification parameters are required');
+			const error = new Error(
+				'All promotion notification parameters are required'
+			);
 			error.statusCode = 400;
 			throw error;
 		}
@@ -196,7 +196,7 @@ class NotificationService extends BaseService {
 			throw error;
 		}
 
-		const notifications = userIds.map(userId => ({
+		const notifications = userIds.map((userId) => ({
 			user_id: userId,
 			type: 'system',
 			title: this._normalizeTitle(title),
@@ -214,12 +214,15 @@ class NotificationService extends BaseService {
 		// Emit events for real-time notifications
 		try {
 			await Promise.all(
-				result.map(notification => 
+				result.map((notification) =>
 					emitCreateNotification(notification.user_id, notification)
 				)
 			);
 		} catch (eventError) {
-			console.warn('Failed to emit system notification events:', eventError.message);
+			console.warn(
+				'Failed to emit system notification events:',
+				eventError.message
+			);
 		}
 
 		return result;
@@ -235,7 +238,10 @@ class NotificationService extends BaseService {
 			throw error;
 		}
 
-		const notification = await this.repository.markAsReadById(notificationId, userId);
+		const notification = await this.repository.markAsReadById(
+			notificationId,
+			userId
+		);
 
 		if (!notification) {
 			const error = new Error('Notification not found or access denied');
@@ -269,7 +275,10 @@ class NotificationService extends BaseService {
 			throw error;
 		}
 
-		const notification = await this.repository.softDeleteById(notificationId, userId);
+		const notification = await this.repository.softDeleteById(
+			notificationId,
+			userId
+		);
 
 		if (!notification) {
 			const error = new Error('Notification not found or access denied');
@@ -290,7 +299,10 @@ class NotificationService extends BaseService {
 			throw error;
 		}
 
-		const notification = await this.repository.findByIdAndUserId(notificationId, userId);
+		const notification = await this.repository.findByIdAndUserId(
+			notificationId,
+			userId
+		);
 
 		if (!notification) {
 			const error = new Error('Notification not found or access denied');
@@ -352,9 +364,10 @@ class NotificationService extends BaseService {
 			total: stats.overall.total,
 			unread: stats.overall.unread,
 			read: stats.overall.read,
-			readPercentage: stats.overall.total > 0 
-				? Math.round((stats.overall.read / stats.overall.total) * 100) 
-				: 0,
+			readPercentage:
+				stats.overall.total > 0
+					? Math.round((stats.overall.read / stats.overall.total) * 100)
+					: 0,
 			byType: stats.byType,
 		};
 	}
@@ -395,10 +408,10 @@ class NotificationService extends BaseService {
 		if (!sortQuery) return { createdAt: -1 };
 
 		const sortMap = {
-			'newest': { createdAt: -1 },
-			'oldest': { createdAt: 1 },
-			'priority': { priority: -1, createdAt: -1 },
-			'type': { type: 1, createdAt: -1 },
+			newest: { createdAt: -1 },
+			oldest: { createdAt: 1 },
+			priority: { priority: -1, createdAt: -1 },
+			type: { type: 1, createdAt: -1 },
 		};
 
 		return sortMap[sortQuery] || { createdAt: -1 };
