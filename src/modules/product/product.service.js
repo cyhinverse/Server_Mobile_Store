@@ -1,418 +1,443 @@
-import Product from './product.model.js';
+import productRepository from './product.repository.js';
 
 class ProductService {
 	constructor() {
 		if (ProductService.instance) return ProductService.instance;
-		this.model = Product;
 		ProductService.instance = this;
+		this.productRepo = productRepository;
 	}
 
 	async createProduct(productData) {
+		// Business logic: Validate product data
 		if (!productData) {
 			throw new Error('Product data is required');
 		}
-		const newProduct = await this.model.create(productData);
-		if (!newProduct || newProduct === null) {
-			throw new Error('Failed to create product');
-		}
-		return await newProduct.save();
-	}
-	async deleteProduct(id) {
-		if (!id) {
-			throw new Error('Product ID is required');
-		}
-		const productExists = await this.model.findById(id);
 
-		if (!productExists) {
-			throw new Error('Product not found');
+		// Business logic: Check if product name already exists
+		const existingProduct = await this.productRepo.findAll({
+			name: productData.name,
+		});
+		if (existingProduct.data.length > 0) {
+			throw new Error('Product with this name already exists');
 		}
-		return await this.model.findByIdAndDelete(id);
+
+		// Business logic: Set default values
+		const processedData = {
+			...productData,
+			stock: productData.stock || 0,
+			sold: productData.sold || 0,
+			isNewProduct: productData.isNewProduct || false,
+			status: productData.status || 'active',
+			createdAt: new Date(),
+		};
+
+		return await this.productRepo.create(processedData);
 	}
-	async updateProduct(data) {
-		if (!data) {
-			throw new Error('Product data is required');
-		}
-		const { id, ...productData } = data;
+
+	async deleteProduct(id) {
+		// Business logic: Validate ID
 		if (!id) {
 			throw new Error('Product ID is required');
 		}
-		const productExists = await this.model.findById(id);
-		if (!productExists) {
-			throw new Error('Product not found');
-		}
-		return await this.model.findByIdAndUpdate(id, productData, { new: true });
-	}
-	async getAllProducts() {
-		const products = await this.model.find();
-		if (!products.length) {
-			throw new Error('No products found');
-		}
-		return products;
-	}
-	async getProductByCategory(categoryId) {
-		if (!categoryId) {
-			throw new Error('Category ID is required');
-		}
-		const products = await this.model.find({ category_id: categoryId });
-		if (!products.length) {
-			throw new Error('No products found for this category');
-		}
-		return products;
-	}
-	async searchProducts(input) {
-		if (!input || input.trim() === '') {
-			throw new Error('Search input is required');
-		}
-		const regex = new RegExp(input, 'i');
-		const products = await this.model.find({ name: { $regex: regex } });
-		if (!products.length) {
-			throw new Error('No products found matching the search criteria');
-		}
-		return products;
-	}
-	async getProductById(productId) {
-		if (!productId) {
-			throw new Error('Product ID is required');
-		}
-		const product = await this.model.findById(productId);
+
+		// Business logic: Check if product exists
+		const product = await this.productRepo.findById(id);
 		if (!product) {
 			throw new Error('Product not found');
 		}
-		return product;
+
+		// Business logic: Check if product has pending orders (if needed)
+		// Add your business logic here
+
+		return await this.productRepo.delete(id);
 	}
-	async filterProducts(filter, page = 1, limit = 10) {
-		if (!filter) {
-			throw new Error('Filter criteria is required');
-		}
 
-		const {
-			name,
-			maxPrice,
-			minPrice,
-			isNewProduct,
-			color,
-			rating,
-			isFeatured,
-			storage,
-			chipset,
-			ram,
-			battery,
-			os,
-		} = filter;
-
-		const query = {};
-
-		// Tìm theo tên
-		if (name) {
-			query.name = { $regex: new RegExp(name, 'i') };
-		}
-
-		// Tìm theo khoảng giá
-		if (minPrice || maxPrice) {
-			query.price = {};
-			if (minPrice) query.price.$gte = minPrice;
-			if (maxPrice) query.price.$lte = maxPrice;
-		}
-
-		// Cờ isNewProduct và isFeatured
-		if (isNewProduct !== undefined) {
-			query.isNewProduct = isNewProduct;
-		}
-		if (isFeatured !== undefined) {
-			query.isFeatured = isFeatured;
-		}
-
-		// Gộp điều kiện trong variants (color, storage)
-		const variantMatch = {};
-		if (color) {
-			const arrayColor = Array.isArray(color) ? color : color.split(',');
-			variantMatch.color = { $in: arrayColor };
-		}
-		if (storage) {
-			const arrayStorage = Array.isArray(storage)
-				? storage
-				: storage.split(',');
-			variantMatch.storage = { $in: arrayStorage };
-		}
-		if (Object.keys(variantMatch).length > 0) {
-			query['product_detail.variants'] = { $elemMatch: variantMatch };
-		}
-
-		// Rating
-		if (rating) {
-			query.rating = { $gte: rating };
-		}
-
-		// Các thuộc tính specs
-		if (chipset) {
-			query['product_detail.specs.chipset'] = chipset;
-		}
-		if (ram) {
-			query['product_detail.specs.ram'] = ram;
-		}
-		if (battery) {
-			query['product_detail.specs.battery'] = battery;
-		}
-		if (os) {
-			query['product_detail.specs.os'] = os;
-		}
-
-		const skip = (page - 1) * limit;
-
-		const [products, total] = await Promise.all([
-			this.model.find(query).skip(skip).limit(limit),
-			this.model.countDocuments(query),
-		]);
-
-		if (!products.length) {
-			throw new Error('No products found matching the filter criteria');
-		}
-
-		return {
-			products,
-			total,
-			page,
-			limit,
-		};
-	}
-	async getProductDetails(slug) {
-		if (!slug || slug.trim() === '') {
-			throw new Error('Slug is required');
-		}
-		const products = await this.model.find({ slug: slug });
-		if (!products.length) {
-			throw new Error('No products found for this slug');
-		}
-		return products;
-	}
-	async updateProduct(id, data) {
-		if (!id || !data) {
+	async updateProduct(id, productData) {
+		// Business logic: Validate inputs
+		if (!id || !productData) {
 			throw new Error('Product ID and data are required');
 		}
 
-		const product = await this.model.findById(id);
-		if (!product) {
+		// Business logic: Check if product exists
+		const existingProduct = await this.productRepo.findById(id);
+		if (!existingProduct) {
 			throw new Error('Product not found');
 		}
 
-		if (Array.isArray(data)) {
-			const updated = await this.model.findByIdAndUpdate(
-				id,
-				{ 'productDetail.variants': data },
-				{ new: true }
-			);
-			if (!updated) throw new Error('Failed to update product variants');
-			return updated;
-		}
+		// Business logic: Process update data
+		const processedData = {
+			...productData,
+			updatedAt: new Date(),
+		};
 
-		if (typeof data === 'object') {
-			const updated = await this.model.findByIdAndUpdate(
-				id,
-				{ productDetail: data },
-				{ new: true }
-			);
-			if (!updated) throw new Error('Failed to update product details');
-			return updated;
-		}
-
-		const updated = await this.model.findByIdAndUpdate(id, data, {
-			new: true,
-		});
-		if (!updated) throw new Error('Failed to update product');
-		return updated;
+		return await this.productRepo.update(id, processedData);
 	}
-	async checkStock(productId, quantity) {
-		if (!productId || !quantity) {
-			throw new Error('Product ID and quantity are required');
-		}
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
-		}
-		const stock = product.stock || 0;
-		if (stock < quantity) {
-			throw new Error('Insufficient stock for the requested product');
-		}
-		return true;
-	}
-	async deductStock(productId, quantity) {
-		if (!productId || !quantity) {
-			throw new Error('Product ID and quantity are required');
-		}
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
-		}
-		if (product.stock < quantity) {
-			throw new Error('Insufficient stock to deduct');
-		}
-		product.stock -= quantity;
-		const updatedProduct = await product.save();
-		if (!updatedProduct) {
-			throw new Error('Failed to deduct stock');
-		}
-		return updatedProduct;
-	}
-	async createVariantForProduct(productId, data) {
-		if (!productId || !data) {
-			throw new Error('Product ID and variant data are required');
-		}
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
-		}
-		if (!Array.isArray(product.productDetail.variants)) {
-			product.productDetail.variants = [];
-		}
-		product.productDetail.variants.push(data);
-		const updatedProduct = await product.save();
-		if (!updatedProduct) {
-			throw new Error('Failed to create product variant');
-		}
-		return updatedProduct;
-	}
-	async updateVariantForProduct(productID, data) {
-		if (!productID || !data) {
-			throw new Error('Product ID and variant data are required');
-		}
 
-		const product = await this.model.findById(productID);
-		if (!product) {
-			throw new Error('Product not found');
-		}
+	async getAllProducts(page = 1, limit = 10) {
+		// Business logic: Validate pagination
+		const validPage = Math.max(1, parseInt(page));
+		const validLimit = Math.min(100, Math.max(1, parseInt(limit))); // Max 100 items per page
 
-		const existingVariantIndex = product.variants.findIndex((v) =>
-			v._id.equals(data._id)
+		const result = await this.productRepo.findAll(
+			{},
+			{},
+			validPage,
+			validLimit
 		);
 
-		if (existingVariantIndex !== -1) {
-			// Update existing variant
-			if (data.stock > product.stock) {
-				throw new Error('Variant stock cannot be greater than product stock');
-			}
-			const newTotalStock = product.variants.reduce((total, v, idx) => {
-				return total + (idx === existingVariantIndex ? data.stock : v.stock);
-			}, 0);
-
-			if (newTotalStock > product.stock) {
-				throw new Error('Total variants stock cannot exceed product stock');
-			}
-
-			const updatedProduct = await this.model.findOneAndUpdate(
-				{
-					_id: productID,
-					'variants._id': data._id,
-				},
-				{ $set: { 'variants.$': data } },
-				{ new: true }
-			);
-
-			if (!updatedProduct) {
-				throw new Error('Failed to update product variant');
-			}
-			return updatedProduct;
-		} else {
-			// Add new variant
-			if (data.stock > product.stock) {
-				throw new Error(
-					'New variant stock cannot be greater than product stock'
-				);
-			}
-
-			const currentTotalStock = product.variants.reduce(
-				(total, v) => total + v.stock,
-				0
-			);
-			if (currentTotalStock + data.stock > product.stock) {
-				throw new Error('Adding this variant would exceed product stock');
-			}
-
-			const updatedProduct = await this.model.findByIdAndUpdate(
-				productID,
-				{ $push: { variants: data } },
-				{ new: true }
-			);
-
-			if (!updatedProduct) {
-				throw new Error('Failed to add new variant');
-			}
-			return updatedProduct;
+		if (!result.data.length) {
+			throw new Error('No products found');
 		}
+
+		return result;
 	}
-	async getListVariantForProduct(productId) {
+
+	async getProductById(productId) {
+		// Business logic: Validate ID
 		if (!productId) {
 			throw new Error('Product ID is required');
 		}
-		const product = await this.model.findById(productId);
+
+		const product = await this.productRepo.findById(productId);
 		if (!product) {
 			throw new Error('Product not found');
 		}
-		const variants = product.variants;
+
+		return product;
+	}
+
+	async getProductByCategory(categoryId, page = 1, limit = 10) {
+		// Business logic: Validate category ID
+		if (!categoryId) {
+			throw new Error('Category ID is required');
+		}
+
+		// Business logic: Validate pagination
+		const validPage = Math.max(1, parseInt(page));
+		const validLimit = Math.min(100, Math.max(1, parseInt(limit)));
+
+		const result = await this.productRepo.findByCategory(
+			categoryId,
+			validPage,
+			validLimit
+		);
+
+		if (!result.data.length) {
+			throw new Error('No products found for this category');
+		}
+
+		return result;
+	}
+
+	async searchProducts(input) {
+		// Business logic: Validate search input
+		if (!input || input.trim() === '') {
+			throw new Error('Search input is required');
+		}
+
+		// Business logic: Clean search input
+		const cleanInput = input.trim();
+
+		const products = await this.productRepo.searchProducts(cleanInput);
+
+		if (!products.length) {
+			throw new Error('No products found matching the search criteria');
+		}
+
+		return products;
+	}
+
+	async filterProducts(filter, page = 1, limit = 10) {
+		// Business logic: Validate filter
+		if (!filter || typeof filter !== 'object') {
+			throw new Error('Filter criteria is required');
+		}
+
+		// Business logic: Process filter parameters
+		const processedFilter = { ...filter };
+
+		// Convert string boolean to actual boolean
+		if (processedFilter.isNewProduct !== undefined) {
+			processedFilter.isNewProduct =
+				processedFilter.isNewProduct === 'true' ||
+				processedFilter.isNewProduct === true;
+		}
+
+		if (processedFilter.isFeatured !== undefined) {
+			processedFilter.isFeatured =
+				processedFilter.isFeatured === 'true' ||
+				processedFilter.isFeatured === true;
+		}
+
+		// Validate price range
+		if (processedFilter.minPrice && processedFilter.maxPrice) {
+			if (
+				parseFloat(processedFilter.minPrice) >
+				parseFloat(processedFilter.maxPrice)
+			) {
+				throw new Error('Minimum price cannot be greater than maximum price');
+			}
+		}
+
+		// Business logic: Validate pagination
+		const validPage = Math.max(1, parseInt(page));
+		const validLimit = Math.min(100, Math.max(1, parseInt(limit)));
+
+		const result = await this.productRepo.filterProducts(
+			processedFilter,
+			validPage,
+			validLimit
+		);
+
+		if (!result.data.length) {
+			throw new Error('No products found matching the filter criteria');
+		}
+
+		return result;
+	}
+
+	async getProductsBySlug(slug) {
+		// Business logic: Validate slug
+		if (!slug || slug.trim() === '') {
+			throw new Error('Slug is required');
+		}
+
+		const cleanSlug = slug.trim().toLowerCase();
+
+		const products = await this.productRepo.findBySlug(cleanSlug);
+
+		if (!products.length) {
+			throw new Error('No products found for this slug');
+		}
+
+		return products;
+	}
+
+	async getProductDetails(slug) {
+		// Business logic: Validate slug
+		if (!slug || slug.trim() === '') {
+			throw new Error('Slug is required');
+		}
+
+		const cleanSlug = slug.trim().toLowerCase();
+
+		const productDetails = await this.productRepo.getProductDetails(cleanSlug);
+
+		if (!productDetails) {
+			throw new Error('Product details not found');
+		}
+
+		return productDetails;
+	}
+
+	async checkStock(productId, quantity) {
+		// Business logic: Validate inputs
+		if (!productId || !quantity) {
+			throw new Error('Product ID and quantity are required');
+		}
+
+		if (quantity <= 0) {
+			throw new Error('Quantity must be greater than 0');
+		}
+
+		const isAvailable = await this.productRepo.checkStock(productId, quantity);
+
+		if (!isAvailable) {
+			throw new Error('Insufficient stock for the requested product');
+		}
+
+		return true;
+	}
+
+	async updateStock(productId, quantity) {
+		// Business logic: Validate inputs
+		if (!productId || !quantity) {
+			throw new Error('Product ID and quantity are required');
+		}
+
+		if (quantity <= 0) {
+			throw new Error('Quantity must be greater than 0');
+		}
+
+		return await this.productRepo.updateStock(productId, quantity);
+	}
+
+	// Variant-related methods (these might need a separate VariantService in a larger application)
+	async createVariantForProduct(productId, variantData) {
+		// Business logic: Validate inputs
+		if (!productId || !variantData) {
+			throw new Error('Product ID and variant data are required');
+		}
+
+		// Business logic: Check if product exists
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		// Business logic: Validate variant data
+		if (!variantData.color || !variantData.storage || !variantData.price) {
+			throw new Error('Variant must have color, storage, and price');
+		}
+
+		// Add variant through repository (this might need custom method)
+		const updatedProduct = await this.productRepo.update(productId, {
+			$push: { variants: { ...variantData, createdAt: new Date() } },
+		});
+
+		return updatedProduct;
+	}
+
+	async getListVariantForProduct(productId) {
+		// Business logic: Validate ID
+		if (!productId) {
+			throw new Error('Product ID is required');
+		}
+
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		const variants = product.variants || [];
+
 		if (variants.length === 0) {
 			throw new Error('No variants found for this product');
 		}
+
 		return variants;
 	}
-	async deleteVariantForProduct(productId, variantId) {
-		if (!productId || !variantId) {
-			throw new Error('Product ID and variant ID are required');
-		}
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
-		}
-		const variantIndex = product.variants.findIndex(
-			(variant) => variant._id.toString() === variantId
-		);
-		if (variantIndex === -1) {
-			throw new Error('Variant not found for this product');
-		}
-		product.variants.splice(variantIndex, 1);
-		const updatedProduct = await product.save();
-		if (!updatedProduct) {
-			throw new Error('Failed to delete product variant');
-		}
-		return updatedProduct;
-	}
-	async getVariantByProductId(productId) {
-		if (!productId) {
-			throw new Error('Product ID is required');
-		}
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
-		}
-		if (!product.variants) {
-			throw new Error('No variants found for this product');
-		}
-		return product.variants;
-	}
-	async checkAndUpdateStock(productId, variantId, quantity) {
-		if (!productId || !variantId || quantity <= 0) {
-			throw new Error(
-				'Product ID, variant ID, and valid quantity are required'
-			);
+
+	async getVariantById(variantId) {
+		// Business logic: Validate ID
+		if (!variantId) {
+			throw new Error('Variant ID is required');
 		}
 
-		const product = await this.model.findById(productId);
-		if (!product) {
-			throw new Error('Product not found');
+		// This would need a custom repository method or different approach
+		// For now, implementing basic logic
+		const products = await this.productRepo.findAll({
+			'variants._id': variantId,
+		});
+
+		if (!products.data.length) {
+			throw new Error('Variant not found');
 		}
 
+		const product = products.data[0];
 		const variant = product.variants.find(
 			(v) => v._id.toString() === variantId
 		);
-		if (!variant) {
+
+		return variant;
+	}
+
+	async updateVariantForProduct(productId, variantData) {
+		// Business logic: Validate inputs
+		if (!productId || !variantData) {
+			throw new Error('Product ID and variant data are required');
+		}
+
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		// Business logic for updating variant
+		// This would need custom repository method for complex variant updates
+
+		return await this.productRepo.update(productId, {
+			variants: variantData,
+			updatedAt: new Date(),
+		});
+	}
+
+	async deleteVariantForProduct(variantId) {
+		// Business logic: Validate ID
+		if (!variantId) {
+			throw new Error('Variant ID is required');
+		}
+
+		// This would need custom repository method for variant deletion
+		// For now, basic implementation
+		const products = await this.productRepo.findAll({
+			'variants._id': variantId,
+		});
+
+		if (!products.data.length) {
+			throw new Error('Variant not found');
+		}
+
+		const product = products.data[0];
+		const updatedVariants = product.variants.filter(
+			(v) => v._id.toString() !== variantId
+		);
+
+		return await this.productRepo.update(product._id, {
+			variants: updatedVariants,
+			updatedAt: new Date(),
+		});
+	}
+
+	async getVariantByProductId(productId) {
+		// Business logic: Validate ID
+		if (!productId) {
+			throw new Error('Product ID is required');
+		}
+
+		const product = await this.productRepo.findById(productId);
+		if (!product) {
+			throw new Error('Product not found');
+		}
+
+		if (!product.variants || product.variants.length === 0) {
 			throw new Error('Variant not found for this product');
 		}
 
-		if (variant.stock < quantity) {
-			throw new Error('Insufficient stock for the requested variant');
+		return product.variants;
+	}
+
+	async checkAndUpdateStock(variantId, quantity) {
+		// Business logic: Validate inputs
+		if (!variantId || !quantity) {
+			throw new Error('Variant ID and quantity are required');
 		}
 
-		// Trừ stock
+		if (quantity <= 0) {
+			throw new Error('Quantity must be greater than 0');
+		}
+
+		// This would need custom repository method for variant stock management
+		// For now, basic implementation
+		const products = await this.productRepo.findAll({
+			'variants._id': variantId,
+		});
+
+		if (!products.data.length) {
+			throw new Error('Variant not found');
+		}
+
+		const product = products.data[0];
+		const variant = product.variants.find(
+			(v) => v._id.toString() === variantId
+		);
+
+		if (!variant) {
+			throw new Error('Variant not found');
+		}
+
+		if (variant.stock < quantity) {
+			throw new Error('Insufficient variant stock');
+		}
+
+		// Update variant stock
 		variant.stock -= quantity;
-		await product.save();
+		variant.sold = (variant.sold || 0) + quantity;
+
+		await this.productRepo.update(product._id, {
+			variants: product.variants,
+			updatedAt: new Date(),
+		});
 
 		return variant;
 	}

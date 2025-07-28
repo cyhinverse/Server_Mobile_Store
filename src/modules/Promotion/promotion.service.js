@@ -1,106 +1,123 @@
-import Promotion from './promotion.model.js';
+import promotionRepository from './promotion.repository.js';
 
 class PromotionService {
 	constructor() {
 		if (PromotionService.instance) return PromotionService.instance;
-		this.model = Promotion;
 		PromotionService.instance = this;
+		this.promotionRepo = promotionRepository;
 	}
 
 	async createPromotion(promotionData) {
+		// Business logic: Validate promotion data
 		if (!promotionData) {
 			throw new Error('Promotion data is required');
 		}
 
-		// Check if promotion with same title already exists
-		const existingPromotion = await this.model.findOne({
-			title: promotionData.title,
-		});
-
+		// Business logic: Check if promotion with same title already exists
+		const existingPromotion = await this.promotionRepo.findByTitle(
+			promotionData.title
+		);
 		if (existingPromotion) {
 			throw new Error('Promotion with this title already exists');
 		}
 
+		// Business logic: Validate date range
 		const startDate = new Date(promotionData.startDate);
 		const endDate = new Date(promotionData.endDate);
+		const currentDate = new Date();
 
 		if (endDate <= startDate) {
 			throw new Error('End date must be after start date');
 		}
 
-		const newPromotion = new this.model(promotionData);
-		const savedPromotion = await newPromotion.save();
-
-		if (!savedPromotion) {
-			throw new Error('Failed to create promotion');
+		if (startDate < currentDate) {
+			throw new Error('Start date cannot be in the past');
 		}
 
-		return await this.model
-			.findById(savedPromotion._id)
-			.populate('applicableProducts', 'name price thumbnail');
+		// Business logic: Validate discount
+		if (promotionData.discountPercent && promotionData.discountAmount) {
+			throw new Error(
+				'Cannot have both discount percentage and discount amount'
+			);
+		}
+
+		if (!promotionData.discountPercent && !promotionData.discountAmount) {
+			throw new Error(
+				'Either discount percentage or discount amount is required'
+			);
+		}
+
+		// Business logic: Validate discount values
+		if (
+			promotionData.discountPercent &&
+			(promotionData.discountPercent < 0 || promotionData.discountPercent > 100)
+		) {
+			throw new Error('Discount percentage must be between 0 and 100');
+		}
+
+		if (promotionData.discountAmount && promotionData.discountAmount < 0) {
+			throw new Error('Discount amount must be greater than 0');
+		}
+
+		// Business logic: Set default values
+		const processedData = {
+			...promotionData,
+			isActive:
+				promotionData.isActive !== undefined ? promotionData.isActive : true,
+			createdAt: new Date(),
+		};
+
+		return await this.promotionRepo.create(processedData);
 	}
 
 	async getAllPromotions(query = {}) {
-		const {
-			page = 1,
-			limit = 10,
-			isActive,
-			search,
-			sortBy = 'createdAt',
-			sortOrder = 'desc',
-		} = query;
+		// Business logic: Validate and process query parameters
+		const page = Math.max(1, parseInt(query.page) || 1);
+		const limit = Math.min(100, Math.max(1, parseInt(query.limit) || 10)); // Max 100 items per page
+		const sortBy = query.sortBy || 'createdAt';
+		const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
 
+		// Business logic: Process filter parameters
 		const filter = {};
 
-		// Filter by active status
-		if (typeof isActive === 'boolean') {
-			filter.isActive = isActive;
+		if (query.isActive !== undefined) {
+			filter.isActive = query.isActive === 'true' || query.isActive === true;
 		}
 
-		// Search functionality
-		if (search) {
-			filter.$or = [
-				{ title: { $regex: search, $options: 'i' } },
-				{ description: { $regex: search, $options: 'i' } },
-			];
+		if (query.search && query.search.trim()) {
+			filter.search = query.search.trim();
 		}
 
-		// Pagination
-		const skip = (page - 1) * limit;
-		const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+		if (query.startDate) {
+			filter.startDate = query.startDate;
+		}
 
-		const [promotions, total] = await Promise.all([
-			this.model
-				.find(filter)
-				.populate('applicableProducts', 'name price thumbnail')
-				.sort(sort)
-				.skip(skip)
-				.limit(parseInt(limit)),
-			this.model.countDocuments(filter),
-		]);
+		if (query.endDate) {
+			filter.endDate = query.endDate;
+		}
 
-		return {
-			promotions,
-			pagination: {
-				currentPage: parseInt(page),
-				totalPages: Math.ceil(total / limit),
-				totalItems: total,
-				itemsPerPage: parseInt(limit),
-				hasNextPage: page < Math.ceil(total / limit),
-				hasPrevPage: page > 1,
-			},
-		};
+		const result = await this.promotionRepo.findAllWithFilter(
+			filter,
+			page,
+			limit,
+			sortBy,
+			sortOrder
+		);
+
+		if (!result.data.length) {
+			throw new Error('No promotions found');
+		}
+
+		return result;
 	}
 
 	async getPromotionById(id) {
+		// Business logic: Validate ID
 		if (!id) {
 			throw new Error('Promotion ID is required');
 		}
 
-		const promotion = await this.model
-			.findById(id)
-			.populate('applicableProducts', 'name price thumbnail slug');
-
+		const promotion = await this.promotionRepo.findById(id);
 		if (!promotion) {
 			throw new Error('Promotion not found');
 		}
@@ -109,6 +126,7 @@ class PromotionService {
 	}
 
 	async updatePromotion(id, updateData) {
+		// Business logic: Validate inputs
 		if (!id) {
 			throw new Error('Promotion ID is required');
 		}
@@ -117,113 +135,150 @@ class PromotionService {
 			throw new Error('Update data is required');
 		}
 
-		// Check if promotion exists
-		const existingPromotion = await this.model.findById(id);
+		// Business logic: Check if promotion exists
+		const existingPromotion = await this.promotionRepo.findById(id);
 		if (!existingPromotion) {
 			throw new Error('Promotion not found');
 		}
 
-		// Check if title is being updated and already exists
+		// Business logic: Check title uniqueness if updating title
 		if (updateData.title && updateData.title !== existingPromotion.title) {
-			const titleExists = await this.model.findOne({
-				title: updateData.title,
-				_id: { $ne: id },
-			});
-
-			if (titleExists) {
+			const titleExists = await this.promotionRepo.findByTitle(
+				updateData.title
+			);
+			if (titleExists && titleExists._id.toString() !== id) {
 				throw new Error('Promotion with this title already exists');
 			}
 		}
 
-		// Validate date range if dates are being updated
-		const startDate = updateData.startDate || existingPromotion.startDate;
-		const endDate = updateData.endDate || existingPromotion.endDate;
+		// Business logic: Validate date range if dates are being updated
+		const startDate = new Date(
+			updateData.startDate || existingPromotion.startDate
+		);
+		const endDate = new Date(updateData.endDate || existingPromotion.endDate);
 
-		if (new Date(endDate) <= new Date(startDate)) {
+		if (endDate <= startDate) {
 			throw new Error('End date must be after start date');
 		}
 
-		const updatedPromotion = await this.model
-			.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
-			.populate('applicableProducts', 'name price thumbnail');
-
-		if (!updatedPromotion) {
-			throw new Error('Failed to update promotion');
+		// Business logic: Validate discount updates
+		if (
+			updateData.discountPercent !== undefined &&
+			updateData.discountAmount !== undefined
+		) {
+			if (updateData.discountPercent && updateData.discountAmount) {
+				throw new Error(
+					'Cannot have both discount percentage and discount amount'
+				);
+			}
 		}
 
-		return updatedPromotion;
+		if (updateData.discountPercent !== undefined) {
+			if (updateData.discountPercent < 0 || updateData.discountPercent > 100) {
+				throw new Error('Discount percentage must be between 0 and 100');
+			}
+		}
+
+		if (updateData.discountAmount !== undefined) {
+			if (updateData.discountAmount < 0) {
+				throw new Error('Discount amount must be greater than 0');
+			}
+		}
+
+		// Business logic: Process update data
+		const processedData = {
+			...updateData,
+			updatedAt: new Date(),
+		};
+
+		return await this.promotionRepo.update(id, processedData);
 	}
 
 	async deletePromotion(id) {
+		// Business logic: Validate ID
 		if (!id) {
 			throw new Error('Promotion ID is required');
 		}
 
-		const promotion = await this.model.findById(id);
+		// Business logic: Check if promotion exists
+		const promotion = await this.promotionRepo.findById(id);
 		if (!promotion) {
 			throw new Error('Promotion not found');
 		}
 
-		const deletedPromotion = await this.model.findByIdAndDelete(id);
-
-		if (!deletedPromotion) {
-			throw new Error('Failed to delete promotion');
+		// Business logic: Check if promotion is currently active
+		const currentDate = new Date();
+		if (
+			promotion.isActive &&
+			promotion.startDate <= currentDate &&
+			promotion.endDate >= currentDate
+		) {
+			throw new Error(
+				'Cannot delete an active promotion. Please deactivate it first.'
+			);
 		}
 
-		return deletedPromotion;
+		return await this.promotionRepo.delete(id);
 	}
 
 	async togglePromotionStatus(id) {
+		// Business logic: Validate ID
 		if (!id) {
 			throw new Error('Promotion ID is required');
 		}
 
-		const promotion = await this.model.findById(id);
+		const promotion = await this.promotionRepo.findById(id);
 		if (!promotion) {
 			throw new Error('Promotion not found');
 		}
 
-		const updatedPromotion = await this.model
-			.findByIdAndUpdate(id, { isActive: !promotion.isActive }, { new: true })
-			.populate('applicableProducts', 'name price thumbnail');
+		// Business logic: Check if promotion can be activated
+		if (!promotion.isActive) {
+			const currentDate = new Date();
+			if (promotion.endDate < currentDate) {
+				throw new Error('Cannot activate an expired promotion');
+			}
+		}
 
-		return updatedPromotion;
+		return await this.promotionRepo.updateStatus(id, !promotion.isActive);
 	}
 
 	async getActivePromotions() {
+		// Business logic: Get current active promotions
 		const currentDate = new Date();
 
-		const activePromotions = await this.model
-			.find({
-				isActive: true,
-				startDate: { $lte: currentDate },
-				endDate: { $gte: currentDate },
-			})
-			.populate('applicableProducts', 'name price thumbnail slug');
+		const activePromotions = await this.promotionRepo.findActivePromotions(
+			currentDate
+		);
+
+		if (!activePromotions.length) {
+			throw new Error('No active promotions found');
+		}
 
 		return activePromotions;
 	}
 
 	async getPromotionsByProduct(productId) {
+		// Business logic: Validate product ID
 		if (!productId) {
 			throw new Error('Product ID is required');
 		}
 
 		const currentDate = new Date();
+		const promotions = await this.promotionRepo.findPromotionsForProduct(
+			productId,
+			currentDate
+		);
 
-		const promotions = await this.model
-			.find({
-				isActive: true,
-				startDate: { $lte: currentDate },
-				endDate: { $gte: currentDate },
-				applicableProducts: productId,
-			})
-			.populate('applicableProducts', 'name price thumbnail');
+		if (!promotions.length) {
+			throw new Error('No promotions found for this product');
+		}
 
 		return promotions;
 	}
 
 	async addProductsToPromotion(promotionId, productIds) {
+		// Business logic: Validate inputs
 		if (!promotionId) {
 			throw new Error('Promotion ID is required');
 		}
@@ -232,28 +287,34 @@ class PromotionService {
 			throw new Error('Product IDs array is required');
 		}
 
-		const promotion = await this.model.findById(promotionId);
+		// Business logic: Check if promotion exists
+		const promotion = await this.promotionRepo.findById(promotionId);
 		if (!promotion) {
 			throw new Error('Promotion not found');
 		}
 
-		// Add unique product IDs to the promotion
-		const uniqueProductIds = [
-			...new Set([...promotion.applicableProducts, ...productIds]),
-		];
+		// Business logic: Filter out duplicate products
+		const existingProductIds = promotion.applicableProducts.map((p) =>
+			p._id.toString()
+		);
+		const newProductIds = productIds.filter(
+			(id) => !existingProductIds.includes(id)
+		);
 
-		const updatedPromotion = await this.model
-			.findByIdAndUpdate(
-				promotionId,
-				{ applicableProducts: uniqueProductIds },
-				{ new: true }
-			)
-			.populate('applicableProducts', 'name price thumbnail');
+		if (newProductIds.length === 0) {
+			throw new Error('All specified products are already in this promotion');
+		}
 
-		return updatedPromotion;
+		// Business logic: Create updated product list
+		const updatedProductIds = [...existingProductIds, ...newProductIds];
+
+		return await this.promotionRepo.update(promotionId, {
+			applicableProducts: updatedProductIds,
+		});
 	}
 
 	async removeProductsFromPromotion(promotionId, productIds) {
+		// Business logic: Validate inputs
 		if (!promotionId) {
 			throw new Error('Promotion ID is required');
 		}
@@ -262,49 +323,99 @@ class PromotionService {
 			throw new Error('Product IDs array is required');
 		}
 
-		const promotion = await this.model.findById(promotionId);
+		// Business logic: Check if promotion exists
+		const promotion = await this.promotionRepo.findById(promotionId);
 		if (!promotion) {
 			throw new Error('Promotion not found');
 		}
 
-		// Remove specified product IDs from the promotion
-		const filteredProductIds = promotion.applicableProducts.filter(
-			(productId) => !productIds.includes(productId.toString())
+		// Business logic: Filter out specified products
+		const existingProductIds = promotion.applicableProducts.map((p) =>
+			p._id.toString()
+		);
+		const filteredProductIds = existingProductIds.filter(
+			(id) => !productIds.includes(id)
 		);
 
-		const updatedPromotion = await this.model
-			.findByIdAndUpdate(
-				promotionId,
-				{ applicableProducts: filteredProductIds },
-				{ new: true }
-			)
-			.populate('applicableProducts', 'name price thumbnail');
+		if (filteredProductIds.length === existingProductIds.length) {
+			throw new Error('None of the specified products are in this promotion');
+		}
 
-		return updatedPromotion;
+		return await this.promotionRepo.update(promotionId, {
+			applicableProducts: filteredProductIds,
+		});
 	}
 
 	async getExpiredPromotions() {
+		// Business logic: Get promotions that have ended
 		const currentDate = new Date();
 
-		const expiredPromotions = await this.model
-			.find({
-				endDate: { $lt: currentDate },
-			})
-			.populate('applicableProducts', 'name price thumbnail');
+		const filter = { endDate: { $lt: currentDate } };
+		const result = await this.promotionRepo.findAllWithFilter(filter);
 
-		return expiredPromotions;
+		if (!result.data.length) {
+			throw new Error('No expired promotions found');
+		}
+
+		return result.data;
 	}
 
 	async getUpcomingPromotions() {
+		// Business logic: Get promotions that haven't started yet
 		const currentDate = new Date();
 
-		const upcomingPromotions = await this.model
-			.find({
-				startDate: { $gt: currentDate },
-			})
-			.populate('applicableProducts', 'name price thumbnail');
+		const filter = { startDate: { $gt: currentDate } };
+		const result = await this.promotionRepo.findAllWithFilter(filter);
 
-		return upcomingPromotions;
+		if (!result.data.length) {
+			throw new Error('No upcoming promotions found');
+		}
+
+		return result.data;
+	}
+
+	async getExpiringPromotions(days = 7) {
+		// Business logic: Validate days parameter
+		const validDays = Math.max(1, Math.min(30, parseInt(days))); // Between 1-30 days
+
+		const expiringPromotions = await this.promotionRepo.findExpiringPromotions(
+			validDays
+		);
+
+		if (!expiringPromotions.length) {
+			throw new Error(`No promotions expiring in the next ${validDays} days`);
+		}
+
+		return expiringPromotions;
+	}
+
+	async validatePromotionForProducts(productIds) {
+		// Business logic: Validate multiple products have valid promotions
+		if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+			throw new Error('Product IDs array is required');
+		}
+
+		const currentDate = new Date();
+		const promotions = await this.promotionRepo.findByProducts(
+			productIds,
+			currentDate
+		);
+
+		// Business logic: Group promotions by product
+		const productPromotions = {};
+
+		promotions.forEach((promotion) => {
+			promotion.applicableProducts.forEach((product) => {
+				if (productIds.includes(product._id.toString())) {
+					if (!productPromotions[product._id]) {
+						productPromotions[product._id] = [];
+					}
+					productPromotions[product._id].push(promotion);
+				}
+			});
+		});
+
+		return productPromotions;
 	}
 }
 

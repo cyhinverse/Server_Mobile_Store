@@ -1,11 +1,14 @@
 import { catchAsync } from '../../configs/catchAsync.js';
+import BaseService from '../../core/service/base.service.js';
 import categoryModel from './category.model.js';
+import categoryRepository from './category.repository.js';
 
-class CategoryService {
+class CategoryService extends BaseService {
 	constructor() {
 		if (CategoryService.instance) return CategoryService.instance;
-		this.model = categoryModel;
+		super(categoryModel);
 		CategoryService.instance = this;
+		this.categoryRepo = categoryRepository;
 	}
 
 	createCategory = catchAsync(async (data) => {

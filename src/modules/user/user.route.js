@@ -12,26 +12,17 @@ router.delete('/:id', UserController.deleteUser);
 router.get('/', UserController.getAllUser);
 router.post('/:id/change-password', UserController.changePassword);
 router.post('/:id/reset-password', UserController.ResetPassword);
-
 router.post('/addresses', UserController.createAddress);
-
 router.delete('/addresses/delete', UserController.deleteAddress);
-
 router.put('/addresses/update', UserController.updateAddress);
-
-router.patch(
-	'/:userId/addresses/:addressId/set-default',
-	UserController.setDefaultAddress
-);
-
-router.get('/:userId/addresses', UserController.getAddressesByUser);
+router.patch('/addresses/set-default', UserController.setDefaultAddress);
+router.get('/addresses/:addressId', UserController.getAddressById);
+router.get('/addresses/byuser', UserController.getAddressesByUser);
 
 router.get(
 	'/:userId/addresses/default',
 	UserController.getDefaultAddressByUser
 );
-
-router.get('/:userId/addresses/:addressId', UserController.getAddressById);
 
 router.get('/admin', UserController.getAllUser);
 

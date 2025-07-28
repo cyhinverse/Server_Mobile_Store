@@ -1,5 +1,6 @@
 'use strict';
 import bcrypt from 'bcrypt';
+import { getPaginationMeta } from '../../shared/response/pagination';
 class BaseRepository {
 	constructor(model) {
 		if (!model) {
@@ -58,10 +59,19 @@ class BaseRepository {
 			throw new Error('Error deleting data: ' + error.message);
 		}
 	}
-	async findAll(query = {}, options = {}) {
+	async findAll(query = {}, options = {}, page, limit) {
 		try {
-			const data = await this.model.find(query, null, options);
-			return data;
+			const skip = (page - 1) * limit;
+			const data = await this.model
+				.find(query, null, {
+					...options,
+				})
+				.skip(skip)
+				.limit(limit)
+				.lean();
+			const total = await this.model.countDocuments(query);
+			const pagination = getPaginationMeta(page, limit, total);
+			return { data, pagination };
 		} catch (error) {
 			throw new Error('Error finding data: ' + error.message);
 		}

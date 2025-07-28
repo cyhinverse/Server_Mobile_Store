@@ -1,6 +1,5 @@
 import { catchAsync } from '../../configs/catchAsync.js';
 import { StatusCodes } from 'http-status-codes';
-import joi from 'joi';
 import PromotionService from './promotion.service.js';
 import PromotionValidation from './promotion.validation.js';
 import {
@@ -15,16 +14,11 @@ class PromotionController {
 		PromotionController.instance = this;
 	}
 
+	/**
+	 * Create new promotion
+	 * POST /api/promotions
+	 */
 	createPromotion = catchAsync(async (req, res) => {
-		// Validate input data
-		if (!req.body || Object.keys(req.body).length === 0) {
-			return formatFail(
-				res,
-				'Promotion data is required',
-				StatusCodes.BAD_REQUEST
-			);
-		}
-
 		const { error, value } = PromotionValidation.createPromotion.validate(
 			req.body,
 			{
@@ -36,32 +30,39 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				statusCode: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				code: 400,
+			});
 		}
 
-		const promotion = await PromotionService.createPromotion(value);
+		try {
+			const promotion = await PromotionService.createPromotion(value);
 
-		if (!promotion) {
-			return formatError(
+			return formatSuccess({
 				res,
-				'Failed to create promotion',
-				StatusCodes.INTERNAL_SERVER_ERROR
-			);
+				message: 'Promotion created successfully',
+				data: promotion,
+				statusCode: StatusCodes.CREATED,
+				code: 201,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to create promotion',
+				statusCode: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Promotion created successfully',
-			promotion,
-			StatusCodes.CREATED
-		);
 	});
 
+	/**
+	 * Get all promotions with filtering and pagination
+	 * GET /api/promotions
+	 */
 	getAllPromotions = catchAsync(async (req, res) => {
 		const { error, value } = PromotionValidation.queryPromotion.validate(
 			req.query,
@@ -74,31 +75,40 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				statusCode: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+				code: 400,
+			});
 		}
 
-		const result = await PromotionService.getAllPromotions(value);
+		try {
+			const result = await PromotionService.getAllPromotions(value);
 
-		if (!result || !result.promotions) {
-			return formatFail(res, 'No promotions found', StatusCodes.NOT_FOUND);
+			return formatSuccess({
+				res,
+				message: 'Promotions retrieved successfully',
+				data: result,
+				statusCode: StatusCodes.OK,
+				code: 200,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve promotions',
+				statusCode: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Promotions retrieved successfully',
-			{
-				promotions: result.promotions,
-				pagination: result.pagination,
-			},
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Get promotion by ID
+	 * GET /api/promotions/:id
+	 */
 	getPromotionById = catchAsync(async (req, res) => {
 		const { error, value } = PromotionValidation.promotionId.validate(
 			req.params,
@@ -111,28 +121,40 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Invalid promotion ID',
+				statusCode: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+				code: 400,
+			});
 		}
 
-		const promotion = await PromotionService.getPromotionById(value.id);
+		try {
+			const promotion = await PromotionService.getPromotionById(value.id);
 
-		if (!promotion) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+			return formatSuccess({
+				res,
+				message: 'Promotion retrieved successfully',
+				data: promotion,
+				statusCode: StatusCodes.OK,
+				code: 200,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve promotion',
+				statusCode: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Promotion retrieved successfully',
-			promotion,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Update promotion
+	 * PUT /api/promotions/:id
+	 */
 	updatePromotion = catchAsync(async (req, res) => {
 		const paramsValidation = PromotionValidation.promotionId.validate(
 			req.params
@@ -150,43 +172,53 @@ class PromotionController {
 			const errorMessages = paramsValidation.error.details.map(
 				(err) => err.message
 			);
-			return formatFail(
+			return formatFail({
 				res,
-				'Invalid promotion ID',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Invalid promotion ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
 		if (bodyValidation.error) {
 			const errorMessages = bodyValidation.error.details.map(
 				(err) => err.message
 			);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const promotion = await PromotionService.updatePromotion(
+				paramsValidation.value.id,
+				bodyValidation.value
 			);
+
+			return formatSuccess({
+				res,
+				message: 'Promotion updated successfully',
+				data: promotion,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to update promotion',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		const promotion = await PromotionService.updatePromotion(
-			paramsValidation.value.id,
-			bodyValidation.value
-		);
-
-		if (!promotion) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
-		}
-
-		return formatSuccess(
-			res,
-			'Promotion updated successfully',
-			promotion,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Delete promotion
+	 * DELETE /api/promotions/:id
+	 */
 	deletePromotion = catchAsync(async (req, res) => {
 		const { error, value } = PromotionValidation.promotionId.validate(
 			req.params,
@@ -199,28 +231,37 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		const result = await PromotionService.deletePromotion(value.id);
+		try {
+			await PromotionService.deletePromotion(value.id);
 
-		if (!result) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+			return formatSuccess({
+				res,
+				message: 'Promotion deleted successfully',
+				data: null,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to delete promotion',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Promotion deleted successfully',
-			null,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Toggle promotion status (active/inactive)
+	 * PATCH /api/promotions/:id/toggle-status
+	 */
 	togglePromotionStatus = catchAsync(async (req, res) => {
 		const { error, value } = PromotionValidation.promotionId.validate(
 			req.params,
@@ -233,49 +274,62 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		const promotion = await PromotionService.togglePromotionStatus(value.id);
+		try {
+			const promotion = await PromotionService.togglePromotionStatus(value.id);
 
-		if (!promotion) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
+			return formatSuccess({
+				res,
+				message: `Promotion ${
+					promotion.isActive ? 'activated' : 'deactivated'
+				} successfully`,
+				data: promotion,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to toggle promotion status',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			`Promotion ${
-				promotion.isActive ? 'activated' : 'deactivated'
-			} successfully`,
-			promotion,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Get active promotions
+	 * GET /api/promotions/active
+	 */
 	getActivePromotions = catchAsync(async (req, res) => {
-		const promotions = await PromotionService.getActivePromotions();
+		try {
+			const promotions = await PromotionService.getActivePromotions();
 
-		if (!promotions || promotions.length === 0) {
-			return formatFail(
+			return formatSuccess({
 				res,
-				'No active promotions found',
-				StatusCodes.NOT_FOUND
-			);
+				message: 'Active promotions retrieved successfully',
+				data: promotions,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve active promotions',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Active promotions retrieved successfully',
-			promotions,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Get promotions by product
+	 * GET /api/promotions/product/:productId
+	 */
 	getPromotionsByProduct = catchAsync(async (req, res) => {
 		const { error, value } = PromotionValidation.promotionId.validate(
 			{ id: req.params.productId },
@@ -288,194 +342,187 @@ class PromotionController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Invalid product ID',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Invalid product ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		const promotions = await PromotionService.getPromotionsByProduct(value.id);
-
-		if (!promotions || promotions.length === 0) {
-			return formatFail(
-				res,
-				'No promotions found for this product',
-				StatusCodes.NOT_FOUND
+		try {
+			const promotions = await PromotionService.getPromotionsByProduct(
+				value.id
 			);
-		}
 
-		return formatSuccess(
-			res,
-			'Product promotions retrieved successfully',
-			promotions,
-			StatusCodes.OK
-		);
+			return formatSuccess({
+				res,
+				message: 'Product promotions retrieved successfully',
+				data: promotions,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve product promotions',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
+	/**
+	 * Add products to promotion
+	 * POST /api/promotions/:id/products
+	 */
 	addProductsToPromotion = catchAsync(async (req, res) => {
 		const { error: paramsError, value: paramsValue } =
 			PromotionValidation.promotionId.validate(req.params);
 
-		const bodyValidation = joi
-			.object({
-				productIds: joi
-					.array()
-					.items(
-						joi
-							.string()
-							.pattern(/^[0-9a-fA-F]{24}$/)
-							.message('Invalid product ID format')
-					)
-					.min(1)
-					.required()
-					.messages({
-						'array.base': 'Product IDs must be an array',
-						'array.min': 'At least one product ID is required',
-						'any.required': 'Product IDs are required',
-					}),
-			})
-			.validate(req.body);
+		const { error: bodyError, value: bodyValue } =
+			PromotionValidation.productIds.validate(req.body);
 
 		if (paramsError) {
 			const errorMessages = paramsError.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Invalid promotion ID',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Invalid promotion ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		if (bodyValidation.error) {
-			const errorMessages = bodyValidation.error.details.map(
-				(err) => err.message
-			);
-			return formatFail(
+		if (bodyError) {
+			const errorMessages = bodyError.details.map((err) => err.message);
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const promotion = await PromotionService.addProductsToPromotion(
+				paramsValue.id,
+				bodyValue.productIds
 			);
+
+			return formatSuccess({
+				res,
+				message: 'Products added to promotion successfully',
+				data: promotion,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to add products to promotion',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		const promotion = await PromotionService.addProductsToPromotion(
-			paramsValue.id,
-			bodyValidation.value.productIds
-		);
-
-		if (!promotion) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
-		}
-
-		return formatSuccess(
-			res,
-			'Products added to promotion successfully',
-			promotion,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Remove products from promotion
+	 * DELETE /api/promotions/:id/products
+	 */
 	removeProductsFromPromotion = catchAsync(async (req, res) => {
 		const { error: paramsError, value: paramsValue } =
 			PromotionValidation.promotionId.validate(req.params);
 
-		const bodyValidation = joi
-			.object({
-				productIds: joi
-					.array()
-					.items(
-						joi
-							.string()
-							.pattern(/^[0-9a-fA-F]{24}$/)
-							.message('Invalid product ID format')
-					)
-					.min(1)
-					.required()
-					.messages({
-						'array.base': 'Product IDs must be an array',
-						'array.min': 'At least one product ID is required',
-						'any.required': 'Product IDs are required',
-					}),
-			})
-			.validate(req.body);
+		const { error: bodyError, value: bodyValue } =
+			PromotionValidation.productIds.validate(req.body);
 
 		if (paramsError) {
 			const errorMessages = paramsError.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Invalid promotion ID',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Invalid promotion ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		if (bodyValidation.error) {
-			const errorMessages = bodyValidation.error.details.map(
-				(err) => err.message
-			);
-			return formatFail(
+		if (bodyError) {
+			const errorMessages = bodyError.details.map((err) => err.message);
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const promotion = await PromotionService.removeProductsFromPromotion(
+				paramsValue.id,
+				bodyValue.productIds
 			);
+
+			return formatSuccess({
+				res,
+				message: 'Products removed from promotion successfully',
+				data: promotion,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to remove products from promotion',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		const promotion = await PromotionService.removeProductsFromPromotion(
-			paramsValue.id,
-			bodyValidation.value.productIds
-		);
-
-		if (!promotion) {
-			return formatFail(res, 'Promotion not found', StatusCodes.NOT_FOUND);
-		}
-
-		return formatSuccess(
-			res,
-			'Products removed from promotion successfully',
-			promotion,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Get expired promotions
+	 * GET /api/promotions/expired
+	 */
 	getExpiredPromotions = catchAsync(async (req, res) => {
-		const promotions = await PromotionService.getExpiredPromotions();
+		try {
+			const promotions = await PromotionService.getExpiredPromotions();
 
-		if (!promotions || promotions.length === 0) {
-			return formatFail(
+			return formatSuccess({
 				res,
-				'No expired promotions found',
-				StatusCodes.NOT_FOUND
-			);
+				message: 'Expired promotions retrieved successfully',
+				data: promotions,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve expired promotions',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Expired promotions retrieved successfully',
-			promotions,
-			StatusCodes.OK
-		);
 	});
 
+	/**
+	 * Get upcoming promotions
+	 * GET /api/promotions/upcoming
+	 */
 	getUpcomingPromotions = catchAsync(async (req, res) => {
-		const promotions = await PromotionService.getUpcomingPromotions();
+		try {
+			const promotions = await PromotionService.getUpcomingPromotions();
 
-		if (!promotions || promotions.length === 0) {
-			return formatFail(
+			return formatSuccess({
 				res,
-				'No upcoming promotions found',
-				StatusCodes.NOT_FOUND
-			);
+				message: 'Upcoming promotions retrieved successfully',
+				data: promotions,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve upcoming promotions',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		return formatSuccess(
-			res,
-			'Upcoming promotions retrieved successfully',
-			promotions,
-			StatusCodes.OK
-		);
 	});
 }
 

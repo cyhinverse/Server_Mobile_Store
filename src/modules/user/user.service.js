@@ -177,6 +177,12 @@ class UserService extends BaseService {
 		if (!user) throw new Error('User not found');
 		return user;
 	}
+	async getAddressesByUser(userId) {
+		if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user ID');
+		const user = await this.userRepo.getAddressesByUserId(userId);
+		if (!user) throw new Error('User not found');
+		return user.address;
+	}
 }
 
 export default new UserService();

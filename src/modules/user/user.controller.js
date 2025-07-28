@@ -7,11 +7,16 @@ import {
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
-import BaseService from '../../core/service/base.service.js';
 import { comparePassword, hashPassword } from '../../utils/password.util.js';
 import { Token } from '../../utils/token.js';
+import BaseController from '../../core/controller/base.controller.js';
 
-class UserController extends BaseService {
+class UserController extends BaseController {
+	constructor() {
+		super(UserService);
+		if (!UserController.instance) return UserController.instance;
+		UserController.instance = this;
+	}
 	createUser = catchAsync(async (req, res) => {
 		const { fullName, email, password, roles } = req.body;
 		console.log('req.body', req.body);
@@ -411,7 +416,6 @@ class UserController extends BaseService {
 			code: StatusCodes.OK,
 		});
 	});
-
 	updateAddress = catchAsync(async (req, res) => {
 		const userId = req.user._id;
 		const {
@@ -483,7 +487,6 @@ class UserController extends BaseService {
 			code: StatusCodes.OK,
 		});
 	});
-
 	getAllAddresses = catchAsync(async (req, res) => {
 		const addresses = await UserService.getAllAddresses();
 		if (!addresses || addresses.length === 0) {
@@ -498,66 +501,87 @@ class UserController extends BaseService {
 		);
 	});
 	getAddressById = catchAsync(async (req, res) => {
-		const { id } = req.params;
+		const userId = req.user._id;
+		const { addressId } = req.params;
+
+		console.log(
+			`Fetching address for userId: ${userId}, addressId: ${addressId}`
+		);
 
 		// Validate input data
-		if (!id || id === 'undefined') {
-			return formatFail(
+		if (!addressId || addressId === 'undefined') {
+			return formatFail({
 				res,
-				'Address ID is required!',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Address ID is required!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const validationAddress = UserValidation.getAddressById;
-		const { error } = validationAddress.validate({ id });
+		const { error } = validationAddress.validate({ userId, addressId });
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		const address = await UserService.getAddressById(id);
+		const address = await UserService.getAddressById(userId, addressId);
 		if (!address) {
-			return formatFail(res, 'Address not found', StatusCodes.NOT_FOUND);
+			return formatFail({
+				res,
+				message: 'Address not found',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Address retrieved successfully',
-			{ data: address },
-			StatusCodes.OK
-		);
+			message: 'Address retrieved successfully',
+			data: { address },
+			code: StatusCodes.OK,
+		});
 	});
 	getAddressesByUser = catchAsync(async (req, res) => {
-		const { userId } = req.params;
+		const userId = req.user._id;
 
 		// Validate input data
-		if (!userId || userId === 'undefined') {
-			return formatFail(res, 'User ID is required!', StatusCodes.BAD_REQUEST);
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User ID is required!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const validationAddress = UserValidation.getAddressesByUser;
 		const { error } = validationAddress.validate({ userId });
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const addresses = await UserService.getAddressesByUser(userId);
 		if (!addresses || addresses.length === 0) {
-			return formatFail(
+			return formatFail({
 				res,
-				'No addresses found for this user',
-				StatusCodes.NOT_FOUND
-			);
+				message: 'No addresses found for this user',
+				code: StatusCodes.NOT_FOUND,
+			});
 		}
 
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'User addresses retrieved successfully',
-			{ data: addresses },
-			StatusCodes.OK
-		);
+			message: 'Addresses retrieved successfully',
+			data: { addresses },
+			code: StatusCodes.OK,
+		});
 	});
 	getDefaultAddressByUser = catchAsync(async (req, res) => {
 		const { userId } = req.params;
@@ -617,11 +641,11 @@ class UserController extends BaseService {
 		);
 	});
 	setDefaultAddress = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const { userId } = req.body;
+		const userId = req.user._id;
+		const { addressId } = req.body;
 
 		// Validate input data
-		if (!id || id === 'undefined') {
+		if (!userId || addressId === 'undefined') {
 			return formatFail(
 				res,
 				'Address ID is required!',
@@ -630,31 +654,39 @@ class UserController extends BaseService {
 		}
 
 		if (!userId) {
-			return formatFail(res, 'User ID is required!', StatusCodes.BAD_REQUEST);
+			return formatFail({
+				res,
+				message: 'User ID is required!',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		const validationAddress = UserValidation.setDefaultAddress;
-		const { error } = validationAddress.validate({ id, userId });
+		const { error } = validationAddress.validate({ userId, addressId });
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
-		}
-
-		const address = await UserService.setDefaultAddress(id, userId);
-		if (!address) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Address not found or update failed',
-				StatusCodes.NOT_FOUND
-			);
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
-		return formatSuccess(
+		const address = await UserService.setDefaultAddress(userId, addressId);
+		if (!address) {
+			return formatFail({
+				res,
+				message: 'Address not found or update failed',
+				code: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		return formatSuccess({
 			res,
-			'Default address set successfully',
-			{ data: address },
-			StatusCodes.OK
-		);
+			message: 'Default address set successfully',
+			data: { address },
+			code: StatusCodes.OK,
+		});
 	});
 	getAddressesCountByUser = catchAsync(async (req, res) => {
 		const { userId } = req.params;

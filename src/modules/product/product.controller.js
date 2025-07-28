@@ -12,9 +12,11 @@ class ProductController {
 	constructor() {
 		if (ProductController.instance) return ProductController.instance;
 		ProductController.instance = this;
+		this.productService = ProductService;
 	}
+
 	createProduct = catchAsync(async (req, res) => {
-		// Validate input data
+		// Validate request body
 		if (!req.body || Object.keys(req.body).length === 0) {
 			return formatFail(
 				res,
@@ -23,6 +25,7 @@ class ProductController {
 			);
 		}
 
+		// Validate input data using Joi
 		const { error, value } = ValidationProduct.createProduct.validate(
 			req.body,
 			{
@@ -42,151 +45,147 @@ class ProductController {
 			);
 		}
 
-		const newProduct = await ProductService.createProduct(value);
-
-		if (!newProduct) {
-			return formatError(
+		try {
+			const newProduct = await this.productService.createProduct(value);
+			return formatSuccess(
 				res,
-				'Failed to create product',
-				StatusCodes.INTERNAL_SERVER_ERROR
+				'Product created successfully',
+				newProduct,
+				StatusCodes.CREATED
 			);
+		} catch (error) {
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product created successfully',
-			newProduct,
-			StatusCodes.CREATED
-		);
 	});
+
 	deleteProduct = catchAsync(async (req, res) => {
 		const { id } = req.query;
 
-		// Validate input
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		console.log(`checking id: ${id}`);
-		const deletedProduct = await ProductService.deleteProduct(id);
-
-		if (!deletedProduct) {
-			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
+		try {
+			await this.productService.deleteProduct(id);
+			return formatSuccess(
+				res,
+				'Product deleted successfully',
+				null,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'Product not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product deleted successfully',
-			null,
-			StatusCodes.OK
-		);
 	});
+
 	getProductById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const product = await ProductService.getProductById(id);
-
-		if (!product) {
-			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
+		try {
+			const product = await this.productService.getProductById(id);
+			return formatSuccess(
+				res,
+				'Product found successfully',
+				product,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'Product not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product found successfully',
-			product,
-			StatusCodes.OK
-		);
 	});
+
 	updateProduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
-		const {
-			name,
-			thumbnail,
-			stock,
-			sold,
-			status,
-			category_id,
-			isNewProduct,
-			detail_id,
-		} = req.body;
 
-		// Validate required fields
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		if (
-			!name ||
-			!thumbnail ||
-			!category_id ||
-			!isNewProduct ||
-			!detail_id ||
-			!stock ||
-			!sold ||
-			!status
-		) {
+		// Validate request body
+		if (!req.body || Object.keys(req.body).length === 0) {
 			return formatFail(
 				res,
-				'All fields are required',
+				'Product data is required',
 				StatusCodes.BAD_REQUEST
 			);
 		}
 
-		const productData = {
-			name,
-			thumbnail,
-			stock,
-			sold,
-			status,
-			category_id,
-			isNewProduct,
-			detail_id,
-			id,
-		};
-
-		const _ValidationProduct = ValidationProduct.updateProduct;
-		const { error } = _ValidationProduct.validate(productData);
+		// Validate input data using Joi
+		const { error, value } = ValidationProduct.updateProduct.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
-			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail(
+				res,
+				'Validation failed',
+				StatusCodes.BAD_REQUEST,
+				errorMessages
+			);
 		}
 
-		const updatedProduct = await ProductService.updateProduct(id, productData);
-
-		if (!updatedProduct) {
-			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
+		try {
+			const updatedProduct = await this.productService.updateProduct(id, value);
+			return formatSuccess(
+				res,
+				'Product updated successfully',
+				updatedProduct,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'Product not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product updated successfully',
-			updatedProduct,
-			StatusCodes.OK
-		);
 	});
+
 	getAllProducts = catchAsync(async (req, res) => {
-		const products = await ProductService.getAllProducts();
+		// Extract and validate query parameters
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
 
-		if (!products || products.length === 0) {
-			return formatFail(res, 'No products found', StatusCodes.NOT_FOUND);
+		try {
+			const products = await this.productService.getAllProducts(page, limit);
+			return formatSuccess(
+				res,
+				'Products retrieved successfully',
+				products,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'No products found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Products retrieved successfully',
-			products,
-			StatusCodes.OK
-		);
 	});
+
 	getProductByCategory = catchAsync(async (req, res) => {
 		const { category_id } = req.params;
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
 
-		// Validate input
+		// Validate request parameters
 		if (!category_id) {
 			return formatFail(
 				res,
@@ -195,27 +194,30 @@ class ProductController {
 			);
 		}
 
-		const products = await ProductService.getProductByCategory(category_id);
-
-		if (!products || products.length === 0) {
-			return formatFail(
-				res,
-				'No products found for this category',
-				StatusCodes.NOT_FOUND
+		try {
+			const products = await this.productService.getProductByCategory(
+				category_id,
+				page,
+				limit
 			);
+			return formatSuccess(
+				res,
+				'Products retrieved successfully',
+				products,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'No products found for this category') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Products retrieved successfully',
-			products,
-			StatusCodes.OK
-		);
 	});
+
 	searchProducts = catchAsync(async (req, res) => {
 		const { input } = req.query;
 
-		// Validate input
+		// Validate request parameters
 		if (!input || input === '') {
 			return formatFail(
 				res,
@@ -224,23 +226,22 @@ class ProductController {
 			);
 		}
 
-		const products = await ProductService.searchProducts(input);
-
-		if (!products || products.length === 0) {
-			return formatFail(
+		try {
+			const products = await this.productService.searchProducts(input);
+			return formatSuccess(
 				res,
-				'No products found matching the search criteria',
-				StatusCodes.NOT_FOUND
+				'Products found successfully',
+				products,
+				StatusCodes.OK
 			);
+		} catch (error) {
+			if (error.message === 'No products found matching the search criteria') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Products found successfully',
-			products,
-			StatusCodes.OK
-		);
 	});
+
 	filterProducts = catchAsync(async (req, res) => {
 		const {
 			name,
@@ -274,89 +275,86 @@ class ProductController {
 			os,
 		};
 
-		const _ValidationProduct = ValidationProduct.filterProducts;
-		const { error } = _ValidationProduct.validate(filter);
+		// Validate filter parameters using Joi
+		const { error } = ValidationProduct.filterProducts.validate(filter);
 
 		if (error) {
 			return formatFail(res, error.details[0].message, StatusCodes.BAD_REQUEST);
 		}
 
-		const filteredProducts = await ProductService.filterProducts(
-			filter,
-			page,
-			limit
-		);
-
-		if (!filteredProducts || filteredProducts.length === 0) {
-			return formatFail(
-				res,
-				'No products found matching the filter criteria',
-				StatusCodes.NOT_FOUND
+		try {
+			const filteredProducts = await this.productService.filterProducts(
+				filter,
+				page,
+				limit
 			);
+			return formatSuccess(
+				res,
+				'Products filtered successfully',
+				filteredProducts,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('No products found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Products filtered successfully',
-			filteredProducts,
-			StatusCodes.OK
-		);
 	});
+
 	getProductsBySlug = catchAsync(async (req, res) => {
 		const { slug } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!slug) {
 			return formatFail(res, 'Slug is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const products = await ProductService.getProductsBySlug(slug);
-
-		if (!products || products.length === 0) {
-			return formatFail(
+		try {
+			const products = await this.productService.getProductsBySlug(slug);
+			return formatSuccess(
 				res,
-				'No products found for this slug',
-				StatusCodes.NOT_FOUND
+				'Products retrieved successfully',
+				products,
+				StatusCodes.OK
 			);
+		} catch (error) {
+			if (error.message === 'No products found for this slug') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Products retrieved successfully',
-			products,
-			StatusCodes.OK
-		);
 	});
+
 	getProductDetails = catchAsync(async (req, res) => {
 		const { slug } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!slug) {
 			return formatFail(res, 'Slug is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const productDetails = await ProductService.getProductDetails(slug);
-
-		if (!productDetails) {
-			return formatFail(
+		try {
+			const productDetails = await this.productService.getProductDetails(slug);
+			return formatSuccess(
 				res,
-				'Product details not found',
-				StatusCodes.NOT_FOUND
+				'Product details retrieved successfully',
+				productDetails,
+				StatusCodes.OK
 			);
+		} catch (error) {
+			if (error.message === 'Product details not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product details retrieved successfully',
-			productDetails,
-			StatusCodes.OK
-		);
 	});
+
 	updateDetailForPorduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		const { data } = req.body;
 
-		// Validate input
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
@@ -369,69 +367,74 @@ class ProductController {
 			);
 		}
 
-		const updatedProduct = await ProductService.updateProduct(id, data);
-
-		if (!updatedProduct) {
-			return formatFail(res, 'Product not found', StatusCodes.NOT_FOUND);
+		try {
+			const updatedProduct = await this.productService.updateProduct(id, data);
+			return formatSuccess(
+				res,
+				'Product details updated successfully',
+				updatedProduct,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'Product not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Product details updated successfully',
-			updatedProduct,
-			StatusCodes.OK
-		);
 	});
+
 	getListVariantForProduct = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const variants = await ProductService.getListVariantForProduct(id);
-
-		if (!variants || variants.length === 0) {
-			return formatFail(
+		try {
+			const variants = await this.productService.getListVariantForProduct(id);
+			return formatSuccess(
 				res,
-				'No variants found for this product',
-				StatusCodes.NOT_FOUND
+				'Variants retrieved successfully',
+				variants,
+				StatusCodes.OK
 			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variants retrieved successfully',
-			variants,
-			StatusCodes.OK
-		);
 	});
+
 	getVariantById = catchAsync(async (req, res) => {
 		const { id } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!id) {
 			return formatFail(res, 'Variant ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const variant = await ProductService.getVariantById(id);
-
-		if (!variant) {
-			return formatFail(res, 'Variant not found', StatusCodes.NOT_FOUND);
+		try {
+			const variant = await this.productService.getVariantById(id);
+			return formatSuccess(
+				res,
+				'Variant retrieved successfully',
+				variant,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message === 'Variant not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variant retrieved successfully',
-			variant,
-			StatusCodes.OK
-		);
 	});
+
 	checkStock = catchAsync(async (req, res) => {
 		const { productId, quantity } = req.body;
 
-		// Validate input
+		// Validate request body
 		if (!productId || !quantity) {
 			return formatFail(
 				res,
@@ -440,28 +443,30 @@ class ProductController {
 			);
 		}
 
-		const isAvailable = await ProductService.checkStock(productId, quantity);
-
-		if (!isAvailable) {
-			return formatFail(
-				res,
-				'Insufficient stock for the requested product',
-				StatusCodes.NOT_FOUND
+		try {
+			const isAvailable = await this.productService.checkStock(
+				productId,
+				quantity
 			);
+			return formatSuccess(
+				res,
+				'Stock is available',
+				{ available: isAvailable },
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('Insufficient stock')) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Stock is available',
-			isAvailable,
-			StatusCodes.OK
-		);
 	});
+
 	createVariantForProductId = catchAsync(async (req, res) => {
 		const { productId } = req.params;
 		const { variantData } = req.body;
 
-		// Validate input
+		// Validate request parameters
 		if (!productId) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
@@ -474,31 +479,30 @@ class ProductController {
 			);
 		}
 
-		const newVariant = await ProductService.createVariantForProduct(
-			productId,
-			variantData
-		);
-
-		if (!newVariant) {
-			return formatError(
-				res,
-				'Failed to create variant for product',
-				StatusCodes.INTERNAL_SERVER_ERROR
+		try {
+			const newVariant = await this.productService.createVariantForProduct(
+				productId,
+				variantData
 			);
+			return formatSuccess(
+				res,
+				'Variant created successfully',
+				newVariant,
+				StatusCodes.CREATED
+			);
+		} catch (error) {
+			if (error.message === 'Product not found') {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variant created successfully',
-			newVariant,
-			StatusCodes.CREATED
-		);
 	});
+
 	updateVariantForProduct = catchAsync(async (req, res) => {
 		const { productId } = req.params;
 		const { data } = req.body;
 
-		// Validate input
+		// Validate request parameters
 		if (!productId) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
@@ -511,82 +515,81 @@ class ProductController {
 			);
 		}
 
-		const updatedVariant = await ProductService.updateVariantForProduct(
-			productId,
-			data
-		);
-
-		if (!updatedVariant) {
-			return formatFail(
-				res,
-				'Variant not found or update failed',
-				StatusCodes.NOT_FOUND
+		try {
+			const updatedVariant = await this.productService.updateVariantForProduct(
+				productId,
+				data
 			);
+			return formatSuccess(
+				res,
+				'Variant updated successfully',
+				updatedVariant,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variant updated successfully',
-			updatedVariant,
-			StatusCodes.OK
-		);
 	});
+
 	deleteVariantForProduct = catchAsync(async (req, res) => {
 		const { variantId } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!variantId) {
 			return formatFail(res, 'Variant ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const deletedVariant = await ProductService.deleteVariantForProduct(
-			variantId
-		);
-
-		if (!deletedVariant) {
-			return formatFail(
-				res,
-				'Variant not found or delete failed',
-				StatusCodes.NOT_FOUND
+		try {
+			const deletedVariant = await this.productService.deleteVariantForProduct(
+				variantId
 			);
+			return formatSuccess(
+				res,
+				'Variant deleted successfully',
+				deletedVariant,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variant deleted successfully',
-			deletedVariant,
-			StatusCodes.OK
-		);
 	});
+
 	getVariantByProductId = catchAsync(async (req, res) => {
 		const { productId } = req.params;
 
-		// Validate input
+		// Validate request parameters
 		if (!productId) {
 			return formatFail(res, 'Product ID is required', StatusCodes.BAD_REQUEST);
 		}
 
-		const variant = await ProductService.getVariantByProductId(productId);
-
-		if (!variant) {
-			return formatFail(
-				res,
-				'Variant not found for this product',
-				StatusCodes.NOT_FOUND
+		try {
+			const variant = await this.productService.getVariantByProductId(
+				productId
 			);
+			return formatSuccess(
+				res,
+				'Variant retrieved successfully',
+				variant,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (error.message.includes('not found')) {
+				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
 		}
-
-		return formatSuccess(
-			res,
-			'Variant retrieved successfully',
-			variant,
-			StatusCodes.OK
-		);
 	});
+
 	checkAndUpdateStock = catchAsync(async (req, res) => {
 		const { variantId, quantity } = req.body;
 
-		// Validate input
+		// Validate request body
 		if (!variantId || !quantity) {
 			return formatFail(
 				res,
@@ -595,17 +598,26 @@ class ProductController {
 			);
 		}
 
-		const updatedVariant = await ProductService.checkAndUpdateStock(
-			variantId,
-			quantity
-		);
-
-		return formatSuccess(
-			res,
-			'Stock updated successfully',
-			updatedVariant,
-			StatusCodes.OK
-		);
+		try {
+			const updatedVariant = await this.productService.checkAndUpdateStock(
+				variantId,
+				quantity
+			);
+			return formatSuccess(
+				res,
+				'Stock updated successfully',
+				updatedVariant,
+				StatusCodes.OK
+			);
+		} catch (error) {
+			if (
+				error.message.includes('not found') ||
+				error.message.includes('Insufficient')
+			) {
+				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			}
+			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+		}
 	});
 }
 

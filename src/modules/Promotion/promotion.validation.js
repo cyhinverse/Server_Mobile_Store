@@ -179,6 +179,25 @@ const PromotionValidation = {
 			'any.only': 'Sort order must be either asc or desc',
 		}),
 	}),
+
+	// Validation for product IDs array
+	productIds: joi.object({
+		productIds: joi
+			.array()
+			.items(
+				joi
+					.string()
+					.pattern(/^[0-9a-fA-F]{24}$/)
+					.message('Invalid product ID format')
+			)
+			.min(1)
+			.required()
+			.messages({
+				'array.base': 'Product IDs must be an array',
+				'array.min': 'At least one product ID is required',
+				'any.required': 'Product IDs are required',
+			}),
+	}),
 };
 
 export default PromotionValidation;

@@ -1,243 +1,548 @@
-import BaseController from '../../core/controller/base.controller.js';
-import notificationService from './notification.service.js';
 import { catchAsync } from '../../configs/catchAsync.js';
+import { StatusCodes } from 'http-status-codes';
+import NotificationService from './notification.service.js';
+import NotificationValidation from './notification.validation.js';
 import {
+	formatError,
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
 
-class NotificationController extends BaseController {
+/**
+ * Notification Controller - HTTP Request/Response Handler
+ * Follows 3-tier architecture: only handles HTTP layer
+ * - Validates request parameters and body
+ * - Delegates business logic to Service layer
+ * - Formats and sends HTTP responses
+ */
+class NotificationController {
 	constructor() {
-		super(notificationService);
-		this.repository = notificationService;
-		if (!NotificationController.instance)
-			return NotificationController.instance;
+		if (NotificationController.instance) return NotificationController.instance;
 		NotificationController.instance = this;
 	}
 
-	// Lấy thông báo của user hiện tại
+	/**
+	 * Get user notifications with filtering and pagination
+	 * GET /api/notifications
+	 */
 	getUserNotifications = catchAsync(async (req, res) => {
-		const userId = req.user.id;
-		const options = {
-			page: parseInt(req.query.page) || 1,
-			limit: parseInt(req.query.limit) || 20,
-			status: req.query.status,
-			type: req.query.type,
-			sort: req.query.sort || '-createdAt',
-		};
-
-		const result = await this.repository.getNotificationsByUser(
-			userId,
-			options
+		const { error, value } = NotificationValidation.queryNotification.validate(
+			req.query,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
 		);
 
-		return formatSuccess(
-			res,
-			result,
-			'Notifications retrieved successfully',
-			200
-		);
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const userId = req.user.id;
+			const result = await NotificationService.getUserNotifications(userId, value);
+
+			return formatSuccess({
+				res,
+				message: 'Notifications retrieved successfully',
+				data: result,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve notifications',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
-	// Đếm thông báo chưa đọc
+	/**
+	 * Get unread notification count
+	 * GET /api/notifications/unread-count
+	 */
 	getUnreadCount = catchAsync(async (req, res) => {
-		const userId = req.user.id;
-		const count = await this.repository.getUnreadCount(userId);
+		try {
+			const userId = req.user.id;
+			const count = await NotificationService.getUnreadCount(userId);
 
-		return formatSuccess(
-			res,
-			{ unreadCount: count },
-			'Unread count retrieved successfully',
-			200
-		);
+			return formatSuccess({
+				res,
+				message: 'Unread count retrieved successfully',
+				data: { unreadCount: count },
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve unread count',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
-	// Tạo thông báo mới (Admin only)
+	/**
+	 * Create new notification (Admin only)
+	 * POST /api/notifications
+	 */
 	createNotification = catchAsync(async (req, res) => {
-		const notification = await this.repository.createNotification(req.body);
-
-		return formatSuccess(
-			res,
-			notification,
-			'Notification created successfully',
-			201
+		const { error, value } = NotificationValidation.createNotification.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
 		);
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const notification = await NotificationService.createNotification(value);
+
+			return formatSuccess({
+				res,
+				message: 'Notification created successfully',
+				data: notification,
+				code: StatusCodes.CREATED,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to create notification',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
-	// Tạo thông báo hệ thống cho nhiều user (Admin only)
+	/**
+	 * Create system notifications for multiple users (Admin only)
+	 * POST /api/notifications/system
+	 */
 	createSystemNotification = catchAsync(async (req, res) => {
-		const { userIds, title, content, metadata } = req.body;
+		const { error, value } = NotificationValidation.createSystemNotification.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
-		if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-			return formatFail(res, 'User IDs array is required', 400);
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		if (!title || !content) {
-			return formatFail(res, 'Title and content are required', 400);
+		try {
+			const notifications = await NotificationService.createSystemNotification(
+				value.userIds,
+				value.title,
+				value.content,
+				value.metadata
+			);
+
+			return formatSuccess({
+				res,
+				message: 'System notifications created successfully',
+				data: { created: notifications.length },
+				code: StatusCodes.CREATED,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to create system notifications',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
-
-		const notifications = await this.repository.createSystemNotification(
-			userIds,
-			title,
-			content,
-			metadata
-		);
-
-		return formatSuccess(
-			res,
-			{ created: notifications.length },
-			'System notifications created successfully',
-			201
-		);
 	});
 
-	// Đánh dấu thông báo đã đọc
-	markAsRead = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const userId = req.user.id;
-
-		const notification = await this.repository.markAsRead(id, userId);
-
-		return formatSuccess(res, notification, 'Notification marked as read', 200);
-	});
-
-	// Đánh dấu tất cả thông báo đã đọc
-	markAllAsRead = catchAsync(async (req, res) => {
-		const userId = req.user.id;
-
-		const result = await this.repository.markAllAsRead(userId);
-
-		return formatSuccess(
-			res,
-			{ modifiedCount: result.modifiedCount },
-			'All notifications marked as read',
-			200
-		);
-	});
-
-	// Xóa thông báo
-	deleteNotification = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const userId = req.user.id;
-
-		const notification = await this.repository.deleteNotification(id, userId);
-
-		return formatSuccess(
-			res,
-			notification,
-			'Notification deleted successfully',
-			200
-		);
-	});
-
-	// Lấy thông báo theo type (Admin only)
-	getNotificationsByType = catchAsync(async (req, res) => {
-		const { type } = req.params;
-		const options = {
-			page: parseInt(req.query.page) || 1,
-			limit: parseInt(req.query.limit) || 20,
-			sort: req.query.sort || '-createdAt',
-		};
-
-		const result = await this.repository.getNotificationsByType(type, options);
-
-		return formatSuccess(
-			res,
-			result,
-			`Notifications of type ${type} retrieved successfully`,
-			200
-		);
-	});
-
-	// Lấy thống kê thông báo của user
-	getNotificationStats = catchAsync(async (req, res) => {
-		const userId = req.user.id;
-
-		const stats = await this.repository.getNotificationStats(userId);
-
-		return formatSuccess(
-			res,
-			stats,
-			'Notification statistics retrieved successfully',
-			200
-		);
-	});
-
-	// Dọn dẹp thông báo hết hạn (Admin only)
-	cleanupExpiredNotifications = catchAsync(async (req, res) => {
-		const result = await this.repository.cleanupExpiredNotifications();
-
-		return formatSuccess(
-			res,
-			{ deletedCount: result.deletedCount },
-			'Expired notifications cleaned up successfully',
-			200
-		);
-	});
-
-	// Lấy chi tiết một thông báo
+	/**
+	 * Get notification by ID
+	 * GET /api/notifications/:id
+	 */
 	getNotificationById = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const userId = req.user.id;
+		const { error, value } = NotificationValidation.notificationId.validate(
+			req.params,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
-		const notification = await this.repository.findById(id);
-
-		// Kiểm tra quyền truy cập
-		if (notification.user.toString() !== userId) {
-			return formatFail(res, 'Access denied', 403);
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Invalid notification ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		return formatSuccess(
-			res,
-			notification,
-			'Notification retrieved successfully',
-			200
-		);
+		try {
+			const userId = req.user.id;
+			const notification = await NotificationService.getNotificationById(
+				value.id,
+				userId
+			);
+
+			return formatSuccess({
+				res,
+				message: 'Notification retrieved successfully',
+				data: notification,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve notification',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
-	// Tạo thông báo đơn hàng (Internal use)
+	/**
+	 * Mark notification as read
+	 * PATCH /api/notifications/:id/read
+	 */
+	markAsRead = catchAsync(async (req, res) => {
+		const { error, value } = NotificationValidation.notificationId.validate(
+			req.params,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Invalid notification ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const userId = req.user.id;
+			const notification = await NotificationService.markAsRead(value.id, userId);
+
+			return formatSuccess({
+				res,
+				message: 'Notification marked as read',
+				data: notification,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to mark notification as read',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Mark all notifications as read
+	 * PATCH /api/notifications/read-all
+	 */
+	markAllAsRead = catchAsync(async (req, res) => {
+		try {
+			const userId = req.user.id;
+			const result = await NotificationService.markAllAsRead(userId);
+
+			return formatSuccess({
+				res,
+				message: 'All notifications marked as read',
+				data: { modifiedCount: result.modifiedCount },
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to mark all notifications as read',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Delete notification
+	 * DELETE /api/notifications/:id
+	 */
+	deleteNotification = catchAsync(async (req, res) => {
+		const { error, value } = NotificationValidation.notificationId.validate(
+			req.params,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
+
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Invalid notification ID',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const userId = req.user.id;
+			await NotificationService.deleteNotification(value.id, userId);
+
+			return formatSuccess({
+				res,
+				message: 'Notification deleted successfully',
+				data: null,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to delete notification',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Get notifications by type (Admin only)
+	 * GET /api/notifications/type/:type
+	 */
+	getNotificationsByType = catchAsync(async (req, res) => {
+		const paramsValidation = NotificationValidation.notificationType.validate(
+			req.params
+		);
+		const queryValidation = NotificationValidation.queryNotification.validate(
+			req.query,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
+
+		if (paramsValidation.error) {
+			const errorMessages = paramsValidation.error.details.map(
+				(err) => err.message
+			);
+			return formatFail({
+				res,
+				message: 'Invalid notification type',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		if (queryValidation.error) {
+			const errorMessages = queryValidation.error.details.map(
+				(err) => err.message
+			);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
+		}
+
+		try {
+			const result = await NotificationService.getNotificationsByType(
+				paramsValidation.value.type,
+				queryValidation.value
+			);
+
+			return formatSuccess({
+				res,
+				message: `Notifications of type ${paramsValidation.value.type} retrieved successfully`,
+				data: result,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve notifications by type',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Get notification statistics
+	 * GET /api/notifications/stats
+	 */
+	getNotificationStats = catchAsync(async (req, res) => {
+		try {
+			const userId = req.user.id;
+			const stats = await NotificationService.getNotificationStats(userId);
+
+			return formatSuccess({
+				res,
+				message: 'Notification statistics retrieved successfully',
+				data: stats,
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to retrieve notification statistics',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Clean up expired notifications (Admin only)
+	 * DELETE /api/notifications/cleanup
+	 */
+	cleanupExpiredNotifications = catchAsync(async (req, res) => {
+		try {
+			const result = await NotificationService.cleanupExpiredNotifications();
+
+			return formatSuccess({
+				res,
+				message: 'Expired notifications cleaned up successfully',
+				data: { deletedCount: result.deletedCount },
+				code: StatusCodes.OK,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to cleanup expired notifications',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
+	});
+
+	/**
+	 * Create order notification (Internal use)
+	 * POST /api/notifications/order
+	 */
 	createOrderNotification = catchAsync(async (req, res) => {
-		const { userId, orderId, orderStatus, orderData } = req.body;
+		const { error, value } = NotificationValidation.createOrderNotification.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
-		if (!userId || !orderId || !orderStatus || !orderData) {
-			return formatFail(res, 'Missing required fields', 400);
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		const notification = await this.repository.createOrderNotification(
-			userId,
-			orderId,
-			orderStatus,
-			orderData
-		);
+		try {
+			const notification = await NotificationService.createOrderNotification(
+				value.userId,
+				value.orderId,
+				value.orderStatus,
+				value.orderData
+			);
 
-		return formatSuccess(
-			res,
-			notification,
-			'Order notification created successfully',
-			201
-		);
+			return formatSuccess({
+				res,
+				message: 'Order notification created successfully',
+				data: notification,
+				code: StatusCodes.CREATED,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to create order notification',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 
-	// Tạo thông báo khuyến mãi (Internal use)
+	/**
+	 * Create promotion notification (Internal use)
+	 * POST /api/notifications/promotion
+	 */
 	createPromotionNotification = catchAsync(async (req, res) => {
-		const { userId, promotionId, promotionData } = req.body;
+		const { error, value } = NotificationValidation.createPromotionNotification.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
-		if (!userId || !promotionId || !promotionData) {
-			return formatFail(res, 'Missing required fields', 400);
+		if (error) {
+			const errorMessages = error.details.map((err) => err.message);
+			return formatFail({
+				res,
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+				errorCode: 'VALIDATION_ERROR',
+			});
 		}
 
-		const notification = await this.repository.createPromotionNotification(
-			userId,
-			promotionId,
-			promotionData
-		);
+		try {
+			const notification = await NotificationService.createPromotionNotification(
+				value.userId,
+				value.promotionId,
+				value.promotionData
+			);
 
-		return formatSuccess(
-			res,
-			notification,
-			'Promotion notification created successfully',
-			201
-		);
+			return formatSuccess({
+				res,
+				message: 'Promotion notification created successfully',
+				data: notification,
+				code: StatusCodes.CREATED,
+			});
+		} catch (error) {
+			return formatError({
+				res,
+				message: error.message || 'Failed to create promotion notification',
+				code: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+			});
+		}
 	});
 }
 

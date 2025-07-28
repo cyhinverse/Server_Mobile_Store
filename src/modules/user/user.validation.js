@@ -89,7 +89,11 @@ const UserValidation = {
 		}),
 	}),
 	getAddressById: joi.object({
-		id: joi.string().required().messages({
+		userId: joi.string().required().messages({
+			'string.empty': 'User ID is required',
+			'any.required': 'User ID is required',
+		}),
+		addressId: joi.string().required().messages({
 			'string.empty': 'Address ID is required',
 			'any.required': 'Address ID is required',
 		}),
@@ -101,13 +105,13 @@ const UserValidation = {
 		}),
 	}),
 	setDefaultAddress: joi.object({
-		id: joi.string().required().messages({
-			'string.empty': 'Address ID is required',
-			'any.required': 'Address ID is required',
-		}),
 		userId: joi.string().required().messages({
 			'string.empty': 'User ID is required',
 			'any.required': 'User ID is required',
+		}),
+		addressId: joi.string().required().messages({
+			'string.empty': 'Address ID is required',
+			'any.required': 'Address ID is required',
 		}),
 	}),
 	getAddressesPaginated: joi.object({

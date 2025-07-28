@@ -7,9 +7,10 @@ import {
 	formatFail,
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
-class CategoryController {
+import BaseController from '../../core/controller/base.controller.js';
+class CategoryController extends BaseController {
 	constructor() {
-		this.categoryService = categoryService;
+		super(categoryService);
 	}
 	createCategory = catchAsync(async (req, res) => {
 		const { name, parentId, description } = req.body;

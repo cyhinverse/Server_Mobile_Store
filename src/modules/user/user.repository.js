@@ -24,6 +24,11 @@ class UserRepository extends BaseRepository {
 			.findOne({ _id: userId, 'address._id': addressId }, { 'address.$': 1 })
 			.lean();
 
+		console.log(
+			`Fetching address for userId: ${userId}, addressId: ${addressId}`,
+			result
+		);
+
 		return result;
 	}
 	async findOne(query, options = {}) {
