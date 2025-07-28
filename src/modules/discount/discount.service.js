@@ -1,54 +1,9 @@
-import Discount from './discount.model.js';
+import BaseService from '../../core/service/base.service.js';
+import DiscountRepository from './discount.repository.js';
 
-class DiscountService {
+class DiscountService extends BaseService {
 	constructor() {
-		if (!DiscountService.instance) return DiscountService.instance;
-		this.model = Discount;
-		DiscountService.instance = this;
-	}
-	async createDiscount({
-		code,
-		isAutomatic,
-		description,
-		type,
-		value,
-		appliesTo,
-		product_ids = [],
-		variant_ids = [],
-		startDate,
-		endDate,
-		usageCount = 0,
-		isActive = true,
-		maxUsage,
-	}) {
-		const discount = await this.model.create({
-			code,
-			isAutomatic,
-			description,
-			type,
-			value,
-			appliesTo,
-			product_ids,
-			variant_ids,
-			startDate,
-			endDate,
-			usageCount,
-			isActive,
-			maxUsage,
-		});
-		if (!discount) throw new Error('Failed to create discount');
-		return await discount.save();
-	}
-	async updateDiscount(id, data) {
-		if (!id) throw new Error('Discount ID is required');
-		if (!data || Object.keys(data).length === 0) {
-			throw new Error('No update data provided');
-		}
-		const discount = await this.model.findByIdAndUpdate(id, data, {
-			new: true,
-		});
-		if (!discount) throw new Error('Discount not found');
-		return discount;
+		super(DiscountRepository);
 	}
 	async applyDiscount({ originalPrice, discountCode }) {
 		const now = new Date();
@@ -58,7 +13,7 @@ class DiscountService {
 		let discount = null;
 
 		if (discountCode) {
-			discount = await Discount.findOne({
+			discount = await this.repository.findOne({
 				code: discountCode,
 				isActive: true,
 				startDate: { $lte: now },
@@ -70,7 +25,7 @@ class DiscountService {
 				throw new Error('Discount usage limit exceeded');
 			}
 		} else {
-			discount = await Discount.findOne({
+			discount = await this.repository.findOne({
 				isAutomatic: true,
 				isActive: true,
 				startDate: { $lte: now },
@@ -90,7 +45,7 @@ class DiscountService {
 			appliedDiscountCode = discountCode ? discount.code : '[AUTO]';
 
 			if (discountCode) {
-				await Discount.updateOne(
+				await this.repository.updateOne(
 					{ code: discount.code },
 					{ $inc: { usageCount: 1 } }
 				);
@@ -102,24 +57,11 @@ class DiscountService {
 			appliedDiscountCode,
 		};
 	}
-	async deleteDiscount(id) {
-		if (!id) throw new Error('Discount ID is required');
-		const discount = await this.model.findByIdAndDelete(id);
-		if (!discount) throw new Error('Discount not found');
-		return discount;
-	}
-	async getAllDiscounts() {
-		const discounts = await this.model.find().sort({ createdAt: -1 });
-		if (!discounts || discounts.length === 0) {
-			throw new Error('No discounts found');
-		}
-		return discounts;
-	}
 	async getDiscountByActiveStatus(isActive) {
 		if (typeof isActive !== 'boolean') {
 			throw new Error('isActive must be a boolean');
 		}
-		const discounts = await this.model
+		const discounts = await this.repository
 			.find({ isActive })
 			.sort({ createdAt: -1 });
 		if (!discounts || discounts.length === 0) {
@@ -131,7 +73,7 @@ class DiscountService {
 		if (typeof isActive !== 'boolean') {
 			throw new Error('isActive must be a boolean');
 		}
-		const discounts = await this.model
+		const discounts = await this.repository
 			.find({ isActive: false })
 			.sort({ createdAt: -1 });
 		if (!discounts || discounts.length === 0) {
@@ -139,17 +81,11 @@ class DiscountService {
 		}
 		return discounts;
 	}
-	async getDiscountById(id) {
-		if (!id) throw new Error('Discount ID is required');
-		const discount = await this.model.findById(id);
-		if (!discount) throw new Error('Discount not found');
-		return discount;
-	}
 	async getDiscountByStartAndEndDate(startDate, endDate) {
 		if (!startDate || !endDate) {
 			throw new Error('Both startDate and endDate are required');
 		}
-		return this.model
+		return this.repository
 			.find({
 				startDate: { $lte: endDate },
 				endDate: { $gte: startDate },

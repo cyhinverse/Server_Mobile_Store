@@ -1,92 +1,11 @@
-import DiscountService from './discount.service.js';
 import { catchAsync } from '../../configs/catchAsync.js';
-import { StatusCodes } from 'http-status-codes';
-import {
-	formatError,
-	formatFail,
-	formatSuccess,
-} from '../../shared/response/responseFormatter.js';
+import BaseController from '../../core/controller/base.controller.js';
+import DiscountService from './discount.service.js';
 
-class DiscountController {
+class DiscountController extends BaseController {
 	constructor() {
-		if (!DiscountController.instance) return DiscountController.instance;
-		DiscountController.instance = this;
-		this.service = DiscountService;
+		super(DiscountService);
 	}
-	createDiscount = catchAsync(async (req, res) => {
-		const {
-			code,
-			isAutomatic,
-			description,
-			type,
-			value,
-			appliesTo,
-			product_ids,
-			variant_ids,
-			startDate,
-			endDate,
-			usageCount,
-			isActive,
-			maxUsage,
-		} = req.body;
-		if (!type || !value) {
-			return formatFail({
-				res,
-				message: 'Type and value are required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-		const discount = await this.service.createDiscount({
-			code,
-			isAutomatic,
-			description,
-			type,
-			value,
-			appliesTo,
-			product_ids,
-			variant_ids,
-			startDate,
-			endDate,
-			usageCount,
-			isActive,
-			maxUsage,
-		});
-		return formatSuccess({
-			res,
-			data: discount,
-			message: 'Discount created successfully',
-			code: StatusCodes.CREATED,
-		});
-	});
-	updateDiscount = catchAsync(async (req, res) => {
-		const { id } = req.params;
-		const data = req.body;
-
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'Discount ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const discount = await this.service.updateDiscount(id, data);
-
-		if (!discount) {
-			return formatFail({
-				res,
-				message: 'Discount not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			data: discount,
-			message: 'Discount updated successfully',
-			code: StatusCodes.OK,
-		});
-	});
 	applyDiscount = catchAsync(async (req, res) => {
 		const { originalPrice, discountCode } = req.body;
 
@@ -107,50 +26,6 @@ class DiscountController {
 			res,
 			data: result,
 			message: 'Discount applied successfully',
-			code: StatusCodes.OK,
-		});
-	});
-	deleteDiscount = catchAsync(async (req, res) => {
-		const { id } = req.params;
-
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'Discount ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const discount = await this.service.deleteDiscount(id);
-
-		if (!discount) {
-			return formatFail({
-				res,
-				message: 'Discount not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-
-		return formatSuccess({
-			res,
-			data: discount,
-			message: 'Discount deleted successfully',
-			code: StatusCodes.OK,
-		});
-	});
-	getDiscounts = catchAsync(async (req, res) => {
-		const discounts = await this.service.getAllDiscounts();
-		if (!discounts || discounts.length === 0) {
-			return formatFail({
-				res,
-				message: 'No discounts found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: discounts,
-			message: 'Discounts retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});
@@ -175,32 +50,6 @@ class DiscountController {
 			res,
 			data: discounts,
 			message: 'Inactive discounts retrieved successfully',
-			code: StatusCodes.OK,
-		});
-	});
-	getDiscountById = catchAsync(async (req, res) => {
-		const { id } = req.params;
-
-		if (!id) {
-			return formatFail({
-				res,
-				message: 'Discount ID is required',
-				code: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		const discount = await this.service.getDiscountById(id);
-		if (!discount) {
-			return formatFail({
-				res,
-				message: 'Discount not found',
-				code: StatusCodes.NOT_FOUND,
-			});
-		}
-		return formatSuccess({
-			res,
-			data: discount,
-			message: 'Discount retrieved successfully',
 			code: StatusCodes.OK,
 		});
 	});

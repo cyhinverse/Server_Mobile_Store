@@ -4,19 +4,19 @@ const router = express.Router();
 import BrandController from './brand.controller.js';
 
 // Create a new brand
-router.post('/', BrandController.createBrand);
+router.post('/', BrandController.create);
 
 // Delete a brand by ID
-router.delete('/:id', BrandController.deleteBrand);
+router.delete('/:id', BrandController.delete);
 
 // Update a brand by ID
-router.put('/:id', BrandController.updateBrand);
+router.put('/:id', BrandController.update);
 
 // Toggle brand status (active/inactive)
 router.patch('/:id/toggle-status', BrandController.toggleBrandStatus);
 
 // Get all brands
-router.get('/all', BrandController.getAllBrands);
+router.get('/all', BrandController.getAll);
 
 // Get only active brands
 router.get('/active', BrandController.getActiveBrands);
@@ -25,7 +25,7 @@ router.get('/active', BrandController.getActiveBrands);
 router.get('/', BrandController.getBrandsPaginated);
 
 // Get a brand by ID
-router.get('/:id', BrandController.getBrandById);
+router.get('/:id', BrandController.getById);
 
 // Get a brand by name
 router.get('/name/:name', BrandController.getBrandByName);
