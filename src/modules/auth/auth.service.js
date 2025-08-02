@@ -11,7 +11,10 @@ class AuthService extends BaseService {
 		if (!code) {
 			throw new Error('Email verification code is required');
 		}
-		const user = await this.authRepo.findOne({ codeVerify: code });
+		const user = await this.authRepo.model.findOne({ codeVerify: code });
+		if (!user) {
+			return null;
+		}
 		if (user.codeVerifyExpires < Date.now()) {
 			throw new Error('Email verification code has expired');
 		}
@@ -63,13 +66,13 @@ class AuthService extends BaseService {
 		if (!email) {
 			throw new Error('Email is required');
 		}
-		return this.authRepo.findOne({ email });
+		return this.authRepo.checkUserExists(email);
 	}
-	async checkComparePassword(userId, password) {
-		if (!userId || !password) {
-			throw new Error('User ID and password are required');
+	async checkComparePassword(password, hashedPassword) {
+		if (!password || !hashedPassword) {
+			throw new Error('Password and hashed password are required');
 		}
-		return this.authRepo.checkComparePassword(userId, password);
+		return this.authRepo.checkComparePassword(password, hashedPassword);
 	}
 	async hashPassword(password) {
 		if (!password) {
@@ -81,12 +84,6 @@ class AuthService extends BaseService {
 		if (!userId || !newPassword)
 			throw new Error('User ID and new password are required');
 		return this.authRepo.updatePasswordForUser(userId, newPassword);
-	}
-	async updateUser(userId, updateData) {
-		if (!userId || !updateData) {
-			throw new Error('User ID and update data are required');
-		}
-		return this.authRepo.updateUser(userId, updateData);
 	}
 }
 

@@ -12,10 +12,12 @@ class UserRepository extends BaseRepository {
 	 * Find users with pagination and filters
 	 */
 	async findWithPagination({ page = 1, limit = 10, search = '', role = '' }) {
+		page = Number(page);
+		limit = Number(limit);
+
 		const skip = (page - 1) * limit;
 		const filter = {};
 
-		// Search filter
 		if (search) {
 			filter.$or = [
 				{ fullName: { $regex: search, $options: 'i' } },
@@ -24,7 +26,6 @@ class UserRepository extends BaseRepository {
 			];
 		}
 
-		// Role filter
 		if (role) {
 			filter.roles = role;
 		}
@@ -42,10 +43,12 @@ class UserRepository extends BaseRepository {
 
 		const pagination = getPaginationMeta(page, limit, totalItems);
 
-		return {
+		const result = {
 			users,
 			...pagination,
 		};
+
+		return result;
 	}
 
 	/**

@@ -17,7 +17,8 @@ import {
 	formatSuccess,
 } from '../../shared/response/responseFormatter.js';
 import BaseController from '../../core/controller/base.controller.js';
-import { comparePassword } from '../../utils/password.util.js';
+import { hashPassword, comparePassword } from '../../utils/password.util.js';
+
 dotenv.config();
 
 class AuthController extends BaseController {
@@ -54,7 +55,7 @@ class AuthController extends BaseController {
 				errors: error.details.map((err) => err.message),
 			});
 		}
-		const userExists = await UserService.checkUserExists(email);
+		const userExists = await AuthService.checkUserExists(email);
 		if (userExists) {
 			return formatFail({
 				res,
@@ -62,7 +63,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
-		const hashedPassword = await UserService.hashPassword(password);
+		const hashedPassword = await hashPassword(password);
 		if (!hashedPassword) {
 			return formatFail({
 				res,
@@ -79,6 +80,7 @@ class AuthController extends BaseController {
 		};
 
 		const newUser = await AuthService.create(userData);
+		console.log(`newUser`, newUser);
 
 		if (!newUser) {
 			return formatError({
@@ -96,6 +98,8 @@ class AuthController extends BaseController {
 				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
+		console.log(`userWithoutPassword`, userWithoutPassword);
+
 		return formatSuccess({
 			res,
 			data: userWithoutPassword,
@@ -171,7 +175,7 @@ class AuthController extends BaseController {
 		res.cookie('accessToken', accessToken, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === 'production',
-			sameSite: 'strict', // ngăn CSRF
+			sameSite: 'strict',
 			path: '/',
 			maxAge: 60 * 60 * 1000,
 		});
@@ -184,6 +188,10 @@ class AuthController extends BaseController {
 				email: user.email,
 				roles: user.roles,
 				permissions: user.permissions,
+			},
+			meta: {
+				accessToken,
+				refreshToken,
 			},
 			message: 'Login successful',
 			code: StatusCodes.OK,
@@ -281,7 +289,7 @@ class AuthController extends BaseController {
 						<p style="color: #555; font-size: 16px; line-height: 1.5;">Hello,</p>
 						<p style="color: #555; font-size: 16px; line-height: 1.5;">We received a request to reset your password. To proceed with resetting your password, please click the button below:</p>
 						<div style="text-align: center; margin: 32px 0;">
-							<a href="${process.env.CLIENT_URL}/reset-password?token=${resetToken}" 
+							<a href="${process.env.CLIENT_URL}/Auth/Reset-Password?token=${resetToken}" 
 								 style="display: inline-block; padding: 12px 28px; background: #3182ce; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s;">Reset Password</a>
 						</div>
 						<p style="color: #555; font-size: 16px; line-height: 1.5;">If you didn't request a password reset, you can safely ignore this email. Your account security is important to us.</p>
@@ -307,12 +315,12 @@ class AuthController extends BaseController {
 		});
 	});
 	resetPassword = catchAsync(async (req, res) => {
-		const { token, newPassword, confirmPassword } = req.body;
+		const { token, newPassword } = req.body;
 
-		if (!token || !newPassword || !confirmPassword) {
+		if (!token || !newPassword) {
 			return formatFail({
 				res,
-				message: 'Token, new password, and confirm password are required',
+				message: 'Token and new password are required',
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
@@ -320,7 +328,6 @@ class AuthController extends BaseController {
 		const { error } = AuthValidation.resetPasswordValidation.validate({
 			token,
 			newPassword,
-			confirmPassword,
 		});
 
 		if (error) {
@@ -484,7 +491,7 @@ class AuthController extends BaseController {
 				code: StatusCodes.UNAUTHORIZED,
 			});
 		}
-		const user = await AuthService.findById(verify.id);
+		const user = await AuthService.findById(verify._id);
 		if (!user || user === null) {
 			return formatFail({
 				res,

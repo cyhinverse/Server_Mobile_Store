@@ -44,10 +44,10 @@ class UserController extends BaseController {
 	getAllUsers = catchAsync(async (req, res) => {
 		const { page = 1, limit = 10, search, role } = req.query;
 
-		// Validation
 		const { error } = UserValidation.getUsersPaginatedValidation.validate(
 			req.query
 		);
+
 		if (error) {
 			return formatFail({
 				res,
@@ -56,12 +56,16 @@ class UserController extends BaseController {
 			});
 		}
 
+		console.log('Query params:', { page, limit, search, role });
+
 		const result = await this.userService.getUsersPaginated({
-			page: parseInt(page),
-			limit: parseInt(limit),
+			page,
+			limit,
 			search,
 			role,
 		});
+
+		console.log('Result from service:', result);
 
 		return formatSuccess({
 			res,

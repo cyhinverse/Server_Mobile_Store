@@ -18,13 +18,12 @@ const AuthValidation = {
 	resetPasswordValidation: Joi.object({
 		token: Joi.string().required(),
 		newPassword: Joi.string().min(6).required(),
-		confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required(),
 	}),
 	changePasswordValidation: Joi.object({
 		oldPassword: Joi.string().min(6).required(),
 		newPassword: Joi.string().min(6).required(),
-		confirmNewPassword: Joi.string().valid(Joi.ref('newPassword')).required(),
 	}),
+
 	assignPermissions: Joi.object({
 		userId: Joi.string().required(),
 		permissions: Joi.array().items(Joi.string()).required(),

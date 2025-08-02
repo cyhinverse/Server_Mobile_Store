@@ -2,7 +2,9 @@ class BaseService {
 	constructor(repository) {
 		this.repository = repository;
 	}
-
+	async findOne(query) {
+		return await this.repository.findOne(query);
+	}
 	async findAll(query = {}) {
 		return await this.repository.findAll(query);
 	}

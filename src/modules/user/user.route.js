@@ -11,6 +11,13 @@ router.use(authMiddleware);
 /**
  * USER MANAGEMENT ROUTES (Admin Only)
  */
+// Get user statistics (put this BEFORE other routes with parameters)
+router.get(
+	'/admin/stats',
+	checkPermission(['admin']),
+	userController.getUserStats
+);
+
 // Create new user
 router.post('/', checkPermission(['admin']), userController.createUser);
 
@@ -28,13 +35,6 @@ router.delete(
 	'/:userId',
 	checkPermission(['admin']),
 	userController.deleteUser
-);
-
-// Get user statistics
-router.get(
-	'/admin/stats',
-	checkPermission(['admin']),
-	userController.getUserStats
 );
 
 /**

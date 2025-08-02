@@ -1,8 +1,7 @@
 import { Types } from 'mongoose';
-import { catchAsync } from '../../configs/catchAsync.js';
 import BaseService from '../../core/service/base.service.js';
 import userRepository from './user.repository.js';
-import { hashPassword, comparePassword } from '../../utils/password.util.js';
+import { hashPassword } from '../../utils/password.util.js';
 
 class UserService extends BaseService {
 	constructor() {
@@ -13,7 +12,7 @@ class UserService extends BaseService {
 	/**
 	 * Create new user (Admin function)
 	 */
-	createUser = catchAsync(async (data) => {
+	createUser = async (data) => {
 		const { fullName, email, password, roles } = data;
 
 		// Business validation
@@ -41,24 +40,26 @@ class UserService extends BaseService {
 		// Remove password from response
 		const { password: _, ...userWithoutPassword } = createdUser.toObject();
 		return userWithoutPassword;
-	});
+	};
 
 	/**
 	 * Get all users with pagination
 	 */
-	getUsersPaginated = catchAsync(async ({ page, limit, search, role }) => {
-		return await this.userRepo.findWithPagination({
+	getUsersPaginated = async ({ page, limit, search, role }) => {
+		const data = await this.userRepo.findWithPagination({
 			page,
 			limit,
 			search,
 			role,
 		});
-	});
+
+		return data;
+	};
 
 	/**
 	 * Get user by ID
 	 */
-	getUserById = catchAsync(async (userId) => {
+	getUserById = async (userId) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
@@ -69,12 +70,12 @@ class UserService extends BaseService {
 		}
 
 		return user;
-	});
+	};
 
 	/**
 	 * Update user
 	 */
-	updateUser = catchAsync(async (userId, dataUser) => {
+	updateUser = async (userId, dataUser) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
@@ -90,12 +91,12 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.update(userId, dataUser);
-	});
+	};
 
 	/**
 	 * Delete user
 	 */
-	deleteUser = catchAsync(async (userId) => {
+	deleteUser = async (userId) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
@@ -106,12 +107,12 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.delete(userId);
-	});
+	};
 
 	/**
 	 * Add address to user
 	 */
-	addAddress = catchAsync(async (userId, addressData) => {
+	addAddress = async (userId, addressData) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
@@ -136,12 +137,12 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.addAddress(userId, addressData);
-	});
+	};
 
 	/**
 	 * Update user address
 	 */
-	updateAddress = catchAsync(async (userId, addressId, addressData) => {
+	updateAddress = async (userId, addressId, addressData) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
@@ -155,12 +156,12 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.updateAddress(userId, addressId, addressData);
-	});
+	};
 
 	/**
 	 * Delete user address
 	 */
-	deleteAddress = catchAsync(async (userId, addressId) => {
+	deleteAddress = async (userId, addressId) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
@@ -174,12 +175,12 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.deleteAddress(userId, addressId);
-	});
+	};
 
 	/**
 	 * Set default address
 	 */
-	setDefaultAddress = catchAsync(async (userId, addressId) => {
+	setDefaultAddress = async (userId, addressId) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
@@ -193,23 +194,23 @@ class UserService extends BaseService {
 		}
 
 		return await this.userRepo.setDefaultAddress(userId, addressId);
-	});
+	};
 
 	/**
 	 * Get user addresses
 	 */
-	getAddressesByUser = catchAsync(async (userId) => {
+	getAddressesByUser = async (userId) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
 
 		return await this.userRepo.getAddressesByUserId(userId);
-	});
+	};
 
 	/**
 	 * Get address by ID
 	 */
-	getAddressById = catchAsync(async (userId, addressId) => {
+	getAddressById = async (userId, addressId) => {
 		if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(addressId)) {
 			throw new Error('Invalid IDs');
 		}
@@ -220,43 +221,43 @@ class UserService extends BaseService {
 		}
 
 		return address;
-	});
+	};
 
 	/**
 	 * Get default address
 	 */
-	getDefaultAddress = catchAsync(async (userId) => {
+	getDefaultAddress = async (userId) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
 
 		return await this.userRepo.getDefaultAddress(userId);
-	});
+	};
 
 	/**
 	 * Get all addresses with pagination (Admin function)
 	 */
-	getAllAddressesPaginated = catchAsync(async ({ page, limit }) => {
+	getAllAddressesPaginated = async ({ page, limit }) => {
 		return await this.userRepo.getAllAddressesPaginated({ page, limit });
-	});
+	};
 
 	/**
 	 * Count addresses by user
 	 */
-	countAddressesByUser = catchAsync(async (userId) => {
+	countAddressesByUser = async (userId) => {
 		if (!Types.ObjectId.isValid(userId)) {
 			throw new Error('Invalid user ID');
 		}
 
 		return await this.userRepo.countAddressesByUser(userId);
-	});
+	};
 
 	/**
 	 * Get user statistics (Admin function)
 	 */
-	getUserStats = catchAsync(async () => {
+	getUserStats = async () => {
 		return await this.userRepo.getUserStats();
-	});
+	};
 }
 
 export default new UserService();

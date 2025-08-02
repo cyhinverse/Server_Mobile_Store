@@ -45,30 +45,11 @@ const UserValidation = {
 	 * Get users paginated validation
 	 */
 	getUsersPaginatedValidation: Joi.object({
-		page: Joi.number().integer().min(1).optional().default(1).messages({
-			'number.base': 'Page must be a number',
-			'number.integer': 'Page must be an integer',
-			'number.min': 'Page must be at least 1',
-		}),
-		limit: Joi.number()
-			.integer()
-			.min(1)
-			.max(100)
-			.optional()
-			.default(10)
-			.messages({
-				'number.base': 'Limit must be a number',
-				'number.integer': 'Limit must be an integer',
-				'number.min': 'Limit must be at least 1',
-				'number.max': 'Limit must not exceed 100',
-			}),
-		search: Joi.string().optional().allow('').messages({
-			'string.base': 'Search must be a string',
-		}),
-		role: Joi.string().valid('user', 'admin', 'staff').optional().messages({
-			'any.only': 'Role must be one of: user, admin, staff',
-		}),
-	}),
+		page: Joi.number().integer().min(1).default(1),
+		limit: Joi.number().integer().min(1).max(100).default(10),
+		search: Joi.string().allow(''),
+		role: Joi.string().allow(''),
+	}).options({ convert: true }),
 
 	/**
 	 * Get user by ID validation

@@ -27,19 +27,12 @@ class AuthRepository extends BaseRepository {
 			{ new: true }
 		);
 	}
-	async checkComparePassword(userId, passsword) {
-		const user = await this.model.findById(userId);
-		if (!user) {
-			throw new Error('User not found');
+	async checkComparePassword(password, hashedPassword) {
+		if (!password || !hashedPassword) {
+			throw new Error('Password and hashed password are required');
 		}
-		const isMatch = await bcrypt.compare(passsword, user.passsword);
-		if (!isMatch) {
-			throw new Error('Password does not match');
-		}
+		const isMatch = await bcrypt.compare(password, hashedPassword);
 		return isMatch;
-	}
-	async hashPassword(password) {
-		return await bcrypt.hash(password, 10);
 	}
 	async updatePasswordForUser(userId, newPassword) {
 		return this.model.findByIdAndUpdate(
@@ -50,6 +43,9 @@ class AuthRepository extends BaseRepository {
 	}
 	async updateUser(userId, updateData) {
 		return this.model.findByIdAndUpdate(userId, updateData, { new: true });
+	}
+	async checkUserExists(email) {
+		return this.model.findOne({ email });
 	}
 }
 

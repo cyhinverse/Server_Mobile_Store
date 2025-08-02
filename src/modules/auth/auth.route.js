@@ -7,8 +7,8 @@ import authMiddleware from '../../middlewares/auth.js';
 
 const router = express.Router();
 
-router.post('/register', litmitRate, AuthController.register);
 router.post('/login', litmitRate, AuthController.login);
+router.post('/register', litmitRate, AuthController.register);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/send-verify-code', AuthController.sendCodeToVerifyEmail);
