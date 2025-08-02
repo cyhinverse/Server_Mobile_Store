@@ -39,7 +39,6 @@ class AuthController extends BaseController {
 				code: StatusCodes.BAD_REQUEST,
 			});
 		}
-
 		const { error } = AuthValidation.registerValidation.validate({
 			fullName,
 			dayOfBirth,
