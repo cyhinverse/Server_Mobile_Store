@@ -18,7 +18,6 @@ import {
 } from '../../shared/response/responseFormatter.js';
 import BaseController from '../../core/controller/base.controller.js';
 import { hashPassword, comparePassword } from '../../utils/password.util.js';
-
 dotenv.config();
 
 class AuthController extends BaseController {
@@ -79,7 +78,6 @@ class AuthController extends BaseController {
 		};
 
 		const newUser = await AuthService.create(userData);
-		console.log(`newUser`, newUser);
 
 		if (!newUser) {
 			return formatError({
@@ -791,6 +789,7 @@ class AuthController extends BaseController {
 			code: StatusCodes.OK,
 		});
 	});
+	
 }
 
 export default new AuthController();

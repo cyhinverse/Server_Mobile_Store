@@ -8,46 +8,98 @@ import { RESPONSE_TYPE } from './responseTypes.js';
  * @param {number} code - HTTP status code
  * @param {object} meta - Thông tin phụ (pagination, version...)
  */
-export const formatSuccess = ({
-	res,
-	data = null,
-	message = 'Success',
-	code = 200,
-	meta = {},
-}) => {
-	return res.status(code).json({
+export const formatSuccess = (resOrOptions, message, data, code, meta) => {
+	// Nếu tham số đầu tiên là object và có res property, dùng destructuring
+	if (typeof resOrOptions === 'object' && resOrOptions.res) {
+		const {
+			res,
+			data: dataParam = null,
+			message: messageParam = 'Success',
+			code: codeParam = 200,
+			meta: metaParam = {},
+		} = resOrOptions;
+		
+		return res.status(codeParam).json({
+			status: RESPONSE_TYPE.SUCCESS,
+			message: messageParam,
+			data: dataParam,
+			meta: metaParam,
+		});
+	}
+	
+	// Nếu không, sử dụng cách gọi truyền thống
+	const res = resOrOptions;
+	
+	// Auto-detect nếu data và code bị đổi chỗ
+	let actualMessage = message || 'Success';
+	let actualData = data;
+	let actualCode = code || 200;
+	
+	// Nếu data là number và code không phải number, có thể bị đổi chỗ
+	if (typeof data === 'number' && typeof code !== 'number') {
+		actualCode = data;
+		actualData = code;
+	}
+	
+	return res.status(actualCode).json({
 		status: RESPONSE_TYPE.SUCCESS,
-		message,
-		data,
-		meta,
+		message: actualMessage,
+		data: actualData || null,
+		meta: meta || {},
 	});
 };
 
 /**
  * Trả về response lỗi do người dùng (logic, validation)
  */
-export const formatFail = ({
-	res = null,
-	message = 'Bad Request',
-	code = 400,
-	errors = [],
-	errorCode = 'FAIL',
-}) => {
-	return res.status(code).json({
+export const formatFail = (resOrOptions, message, code, errors, errorCode) => {
+	// Nếu tham số đầu tiên là object và có res property, dùng destructuring
+	if (typeof resOrOptions === 'object' && resOrOptions.res) {
+		const {
+			res = null,
+			message: messageParam = 'Bad Request',
+			code: codeParam = 400,
+			errors: errorsParam = [],
+			errorCode: errorCodeParam = 'FAIL',
+		} = resOrOptions;
+		
+		return res.status(codeParam).json({
+			status: RESPONSE_TYPE.FAIL,
+			message: messageParam,
+			errorCode: errorCodeParam,
+			errors: errorsParam,
+		});
+	}
+	
+	// Nếu không, sử dụng cách gọi truyền thống
+	const res = resOrOptions;
+	return res.status(code || 400).json({
 		status: RESPONSE_TYPE.FAIL,
-		message,
-		errorCode,
-		errors,
+		message: message || 'Bad Request',
+		errorCode: errorCode || 'FAIL',
+		errors: errors || [],
 	});
 };
 
-export const formatError = ({
-	res,
-	message = 'Internal Server Error',
-	code = 500,
-}) => {
-	return res.status(code).json({
+export const formatError = (resOrOptions, message, code) => {
+	// Nếu tham số đầu tiên là object và có res property, dùng destructuring
+	if (typeof resOrOptions === 'object' && resOrOptions.res) {
+		const {
+			res,
+			message: messageParam = 'Internal Server Error',
+			code: codeParam = 500,
+		} = resOrOptions;
+		
+		return res.status(codeParam).json({
+			status: RESPONSE_TYPE.ERROR,
+			message: messageParam,
+		});
+	}
+	
+	// Nếu không, sử dụng cách gọi truyền thống
+	const res = resOrOptions;
+	return res.status(code || 500).json({
 		status: RESPONSE_TYPE.ERROR,
-		message,
+		message: message || 'Internal Server Error',
 	});
 };

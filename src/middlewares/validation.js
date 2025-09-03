@@ -20,7 +20,7 @@ export const validateData = (schema, source = 'body') => {
 
 		const { error, value } = schema.validate(dataToValidate, {
 			abortEarly: false,
-			allowUnknown: true,
+			allowUnknown: false,
 			stripUnknown: true,
 		});
 

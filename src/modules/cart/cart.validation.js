@@ -8,10 +8,6 @@ export const ValidationCart = {
 	 * Validation for adding item to cart
 	 */
 	addToCart: Joi.object({
-		userId: Joi.string().pattern(objectIdPattern).required().messages({
-			'string.pattern.base': 'User ID must be a valid MongoDB ObjectId',
-			'any.required': 'User ID is required',
-		}),
 
 		productId: Joi.string().pattern(objectIdPattern).required().messages({
 			'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId',

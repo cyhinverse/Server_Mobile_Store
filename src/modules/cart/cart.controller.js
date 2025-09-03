@@ -18,7 +18,10 @@ class CartController extends BaseController {
 	 * POST /api/carts
 	 */
 	addToCart = catchAsync(async (req, res) => {
-		const { error } = ValidationCart.addToCart.validate(req.body);
+		const userId = req.user.id
+		const {productId,quantity} = req.body;
+		const { error } = ValidationCart.addToCart.validate({userId,productId,quantity});
+
 		if (error) {
 			return formatFail({
 				res,
@@ -28,8 +31,16 @@ class CartController extends BaseController {
 			});
 		}
 
-		const { userId, productId, quantity } = req.body;
 		const cartItem = await cartService.addToCart(userId, productId, quantity);
+
+		if(!cartItem ||  cartItem === null){
+			return formatFail({
+				res,
+				message: "Add product to cart faile!",
+				code: 400,
+				errorCode: "400"
+			})
+		}
 
 		return formatSuccess({
 			res,

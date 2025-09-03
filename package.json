@@ -28,6 +28,7 @@
 	"license": "ISC",
 	"description": "This is a Node.js server for a mobile store application. It provides RESTful APIs for user authentication, product management, and order processing.",
 	"dependencies": {
+		"axios": "^1.11.0",
 		"bcrypt": "^6.0.0",
 		"cloudinary": "^2.7.0",
 		"compression": "^1.8.0",

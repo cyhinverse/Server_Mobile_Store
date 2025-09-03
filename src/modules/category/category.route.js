@@ -16,6 +16,9 @@ router.get('/paginated', CategoryController.getCategoriesPaginated);
 router.get('/tree', CategoryController.getTreeCategories);
 
 // Get all categories
+router.get('/', CategoryController.getAllCategories);
+
+// Get all categories (alternative endpoint)
 router.get('/all', CategoryController.getAllCategories);
 
 // Get category by slug

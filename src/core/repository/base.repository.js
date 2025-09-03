@@ -59,8 +59,14 @@ class BaseRepository {
 			throw new Error('Error deleting data: ' + error.message);
 		}
 	}
-	async findAll(query = {}, options = {}, page, limit) {
+	async findAll(query = {}, options = {}, page = 1, limit = 10) {
 		try {
+			// Nếu không có page hoặc limit, trả về tất cả data
+			if (!page || !limit || page === 1 && limit === 10 && Object.keys(options).length === 0) {
+				const data = await this.model.find(query).lean();
+				return { data, pagination: null };
+			}
+			
 			const skip = (page - 1) * limit;
 			const data = await this.model
 				.find(query, null, {
@@ -107,6 +113,14 @@ class BaseRepository {
 			return deletedData;
 		} catch (error) {
 			throw new Error('Error deleting data: ' + error.message);
+		}
+	}
+	async countDocuments(query = {}) {
+		try {
+			const count = await this.model.countDocuments(query);
+			return count;
+		} catch (error) {
+			throw new Error('Error counting documents: ' + error.message);
 		}
 	}
 	async hashPassword(password) {

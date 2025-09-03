@@ -39,13 +39,15 @@ const ValidationProduct = {
 			'string.empty': 'Category ID is required',
 			'any.required': 'Category ID is required',
 		}),
-		isNewProduct: joi.boolean().required().messages({
-			'boolean.base': 'isNewProduct must be a boolean',
-			'any.required': 'isNewProduct is required',
+		brand_id: joi.string().required().messages({
+			'string.empty': 'Brand ID is required',
+			'any.required': 'Brand ID is required',
 		}),
-		isFeatured: joi.boolean().required().messages({
+		isNewProduct: joi.boolean().default(false).messages({
+			'boolean.base': 'isNewProduct must be a boolean',
+		}),
+		isFeatured: joi.boolean().default(false).messages({
 			'boolean.base': 'isFeatured must be a boolean',
-			'any.required': 'isFeatured is required',
 		}),
 		productDetail: joi
 			.object({
@@ -85,6 +87,31 @@ const ValidationProduct = {
 				'any.required': 'Product detail is required',
 				'object.base': 'Product detail must be an object',
 			}),
+		variants: joi.array().items(
+			joi.object({
+				color: joi.string().required(),
+				storage: joi.string().required(),
+				price: joi
+					.object({
+						originalPrice: joi.number().min(0).required(),
+						discountedPrice: joi.number().min(0).optional(),
+						discountType: joi.string().valid('percentage', 'fixed').optional(),
+						discountValue: joi.number().min(0).optional(),
+						discountStartDate: joi.date().optional(),
+						discountEndDate: joi.date().optional(),
+						discountCode: joi.string().trim().optional(),
+						discountDescription: joi.string().trim().optional(),
+						currency: joi.string().valid('VND').default('VND'),
+					})
+					.required(),
+				stock: joi.number().integer().min(0).default(0),
+				sku: joi.string().optional(),
+				image_url: joi.string().uri().optional(),
+			})
+		).optional(),
+		slug: joi.string().optional(),
+		createdAt: joi.date().optional(),
+		updatedAt: joi.date().optional(),
 	}),
 	createVariantForProduct: joi.object({
 		product_id: joi.string().required(),
