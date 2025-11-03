@@ -8,17 +8,13 @@ const discountSchema = new Schema(
 			unique: true,
 			sparse: true,
 		},
-
 		isAutomatic: {
 			type: Boolean,
 			default: false,
 		},
-
 		description: { type: String },
-
 		type: { type: String, enum: ['percentage', 'fixed'], required: true },
 		value: { type: Number, required: true, min: 0 },
-
 		appliesTo: {
 			type: String,
 			enum: ['all', 'product', 'variant'],
@@ -26,10 +22,8 @@ const discountSchema = new Schema(
 		},
 		product_ids: [{ type: Types.ObjectId, ref: 'Product' }],
 		variant_ids: [{ type: Types.ObjectId, ref: 'Variant' }],
-
 		startDate: { type: Date },
 		endDate: { type: Date },
-
 		maxUsage: { type: Number },
 		usageCount: { type: Number, default: 0 },
 		isActive: { type: Boolean, default: true },

@@ -62,11 +62,15 @@ class BaseRepository {
 	async findAll(query = {}, options = {}, page = 1, limit = 10) {
 		try {
 			// Nếu không có page hoặc limit, trả về tất cả data
-			if (!page || !limit || page === 1 && limit === 10 && Object.keys(options).length === 0) {
+			if (
+				!page ||
+				!limit ||
+				(page === 1 && limit === 10 && Object.keys(options).length === 0)
+			) {
 				const data = await this.model.find(query).lean();
 				return { data, pagination: null };
 			}
-			
+
 			const skip = (page - 1) * limit;
 			const data = await this.model
 				.find(query, null, {

@@ -601,11 +601,13 @@ class AuthController extends BaseController {
 		});
 	});
 	getAllRoles = catchAsync(async (req, res) => {
-		const rolesEnum = User.schema.path('roles').caster.enumValues;
+		// Lấy enum values từ schema definition
+		const rolesSchema = User.schema.paths.roles;
+		const rolesEnum = rolesSchema?.enumValues || rolesSchema?.options?.enum || ['user', 'admin'];
 
 		return formatSuccess({
 			res,
-			data: rolesEnum || ['user', 'admin'],
+			data: rolesEnum,
 			message: 'Get all roles successfully',
 			code: StatusCodes.OK,
 		});

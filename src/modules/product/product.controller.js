@@ -20,7 +20,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product data is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -29,7 +29,7 @@ class ProductController {
 			res,
 			message: 'Product created successfully',
 			data: newProduct,
-			statusCode: StatusCodes.CREATED
+			statusCode: StatusCodes.CREATED,
 		});
 	});
 
@@ -41,7 +41,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -50,7 +50,7 @@ class ProductController {
 			res,
 			message: 'Product deleted successfully',
 			data: null,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -62,7 +62,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -71,7 +71,7 @@ class ProductController {
 			res,
 			message: 'Product found successfully',
 			data: product,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -83,7 +83,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -92,16 +92,19 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product data is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		const updatedProduct = await this.productService.updateProduct(id, req.body);
+		const updatedProduct = await this.productService.updateProduct(
+			id,
+			req.body
+		);
 		return formatSuccess({
 			res,
 			message: 'Product updated successfully',
 			data: updatedProduct,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -115,7 +118,7 @@ class ProductController {
 			res,
 			message: 'Products retrieved successfully',
 			data: products,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -129,7 +132,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Category ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -142,7 +145,7 @@ class ProductController {
 			res,
 			message: 'Products retrieved successfully',
 			data: products,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -155,7 +158,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Search input is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -165,7 +168,7 @@ class ProductController {
 				res,
 				message: 'Products found successfully',
 				data: products,
-				statusCode: StatusCodes.OK
+				statusCode: StatusCodes.OK,
 			});
 		} catch (error) {
 			// If no products found, return empty array instead of error
@@ -174,7 +177,7 @@ class ProductController {
 					res,
 					message: 'No products found',
 					data: [],
-					statusCode: StatusCodes.OK
+					statusCode: StatusCodes.OK,
 				});
 			}
 			// Re-throw other errors
@@ -222,7 +225,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: error.details[0].message,
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -235,7 +238,7 @@ class ProductController {
 			res,
 			message: 'Products filtered successfully',
 			data: filteredProducts,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -247,7 +250,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Slug is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -256,7 +259,7 @@ class ProductController {
 			res,
 			message: 'Products retrieved successfully',
 			data: products,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -268,7 +271,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Slug is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -277,7 +280,7 @@ class ProductController {
 			res,
 			message: 'Product details retrieved successfully',
 			data: productDetails,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -290,7 +293,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -298,7 +301,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product data is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -307,7 +310,7 @@ class ProductController {
 			res,
 			message: 'Product details updated successfully',
 			data: updatedProduct,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -319,7 +322,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -328,7 +331,7 @@ class ProductController {
 			res,
 			message: 'Variants retrieved successfully',
 			data: variants,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -340,7 +343,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Variant ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -349,7 +352,7 @@ class ProductController {
 			res,
 			message: 'Variant retrieved successfully',
 			data: variant,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -361,7 +364,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID and quantity are required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -373,7 +376,7 @@ class ProductController {
 			res,
 			message: 'Stock is available',
 			data: { available: isAvailable },
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -386,7 +389,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -394,7 +397,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Variant data is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -406,7 +409,7 @@ class ProductController {
 			res,
 			message: 'Variant created successfully',
 			data: newVariant,
-			statusCode: StatusCodes.CREATED
+			statusCode: StatusCodes.CREATED,
 		});
 	});
 
@@ -419,7 +422,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -427,7 +430,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Variant data is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -439,7 +442,7 @@ class ProductController {
 			res,
 			message: 'Variant updated successfully',
 			data: updatedVariant,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -451,7 +454,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Variant ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -462,7 +465,7 @@ class ProductController {
 			res,
 			message: 'Variant deleted successfully',
 			data: deletedVariant,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -474,18 +477,16 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		const variant = await this.productService.getVariantByProductId(
-			productId
-		);
+		const variant = await this.productService.getVariantByProductId(productId);
 		return formatSuccess({
 			res,
 			message: 'Variant retrieved successfully',
 			data: variant,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -497,7 +498,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Variant ID and quantity are required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -509,19 +510,19 @@ class ProductController {
 			res,
 			message: 'Stock updated successfully',
 			data: updatedVariant,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
 	// Statistics
 	getProductStats = catchAsync(async (req, res) => {
 		const stats = await this.productService.getProductStats();
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Product statistics retrieved successfully',
-			StatusCodes.OK,
-			stats
-		);
+			message: 'Product statistics retrieved successfully',
+			code: StatusCodes.OK,
+			data: stats,
+		});
 	});
 
 	// Pagination
@@ -542,7 +543,7 @@ class ProductController {
 			res,
 			message: 'Products retrieved successfully',
 			data: products,
-			statusCode: StatusCodes.OK
+			statusCode: StatusCodes.OK,
 		});
 	});
 
@@ -555,7 +556,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Category ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -563,12 +564,12 @@ class ProductController {
 			categoryId,
 			{ page: parseInt(page), limit: parseInt(limit) }
 		);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Products by category retrieved successfully',
-			StatusCodes.OK,
-			products
-		);
+			message: 'Products by category retrieved successfully',
+			code: StatusCodes.OK,
+			data: products,
+		});
 	});
 
 	// Featured products
@@ -577,12 +578,12 @@ class ProductController {
 		const products = await this.productService.getFeaturedProducts(
 			parseInt(limit)
 		);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Featured products retrieved successfully',
-			StatusCodes.OK,
-			products
-		);
+			message: 'Featured products retrieved successfully',
+			code: StatusCodes.OK,
+			data: products,
+		});
 	});
 
 	// Newest products
@@ -591,12 +592,12 @@ class ProductController {
 		const products = await this.productService.getNewestProducts(
 			parseInt(limit)
 		);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Newest products retrieved successfully',
-			StatusCodes.OK,
-			products
-		);
+			message: 'Newest products retrieved successfully',
+			code: StatusCodes.OK,
+			data: products,
+		});
 	});
 
 	// Popular products
@@ -605,12 +606,12 @@ class ProductController {
 		const products = await this.productService.getPopularProducts(
 			parseInt(limit)
 		);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Popular products retrieved successfully',
-			StatusCodes.OK,
-			products
-		);
+			message: 'Popular products retrieved successfully',
+			code: StatusCodes.OK,
+			data: products,
+		});
 	});
 
 	// Get product by slug
@@ -621,24 +622,24 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product slug is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const product = await this.productService.getProductBySlug(slug);
 		if (!product) {
 			return formatFail({
-			res,
-			message: 'Product not found',
-			statusCode: StatusCodes.NOT_FOUND
-		});
+				res,
+				message: 'Product not found',
+				statusCode: StatusCodes.NOT_FOUND,
+			});
 		}
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Product retrieved successfully',
-			StatusCodes.OK,
-			product
-		);
+			message: 'Product retrieved successfully',
+			code: StatusCodes.OK,
+			data: product,
+		});
 	});
 
 	// Product reviews
@@ -650,7 +651,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -658,12 +659,12 @@ class ProductController {
 			page: parseInt(page),
 			limit: parseInt(limit),
 		});
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Product reviews retrieved successfully',
-			StatusCodes.OK,
-			reviews
-		);
+			message: 'Product reviews retrieved successfully',
+			code: StatusCodes.OK,
+			data: reviews,
+		});
 	});
 
 	addProductReview = catchAsync(async (req, res) => {
@@ -675,17 +676,17 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const review = await this.productService.addProductReview(reviewData);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Review added successfully',
-			StatusCodes.CREATED,
-			review
-		);
+			message: 'Review added successfully',
+			code: StatusCodes.CREATED,
+			data: review,
+		});
 	});
 
 	// Product images
@@ -697,7 +698,7 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
@@ -705,17 +706,17 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'At least one image is required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		const result = await this.productService.addProductImages(id, images);
-		return formatSuccess(
+		return formatSuccess({
 			res,
-			'Images added successfully',
-			StatusCodes.OK,
-			result
-		);
+			message: 'Images added successfully',
+			code: StatusCodes.OK,
+			data: result,
+		});
 	});
 
 	deleteProductImage = catchAsync(async (req, res) => {
@@ -725,12 +726,16 @@ class ProductController {
 			return formatFail({
 				res,
 				message: 'Product ID and Image ID are required',
-				statusCode: StatusCodes.BAD_REQUEST
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
 		await this.productService.deleteProductImage(id, imageId);
-		return formatSuccess(res, 'Image deleted successfully', StatusCodes.OK);
+		return formatSuccess({
+			res,
+			message: 'Image deleted successfully',
+			code: StatusCodes.OK,
+		});
 	});
 }
 

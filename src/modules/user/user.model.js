@@ -22,8 +22,8 @@ const userSchema = new Schema(
 		isStudent: { type: Boolean, default: false },
 		isTeacher: { type: Boolean, default: false },
 		roles: {
-			type: String,
-			default: 'user',
+			type: [String],
+			default: ['user'],
 			enum: ['user', 'admin'],
 		},
 		permissions: {

@@ -24,27 +24,31 @@ class ReviewController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			// Add user ID from auth middleware
 			value.userId = req.user.id;
-			
+
 			const newReview = await ReviewService.createReview(value);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Review created successfully',
-				StatusCodes.CREATED,
-				newReview
-			);
+				message: 'Review created successfully',
+				code: StatusCodes.CREATED,
+				data: newReview,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -59,28 +63,36 @@ class ReviewController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			value.id = id;
 			const updatedReview = await ReviewService.updateReview(value);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Review updated successfully',
-				StatusCodes.OK,
-				updatedReview
-			);
+				message: 'Review updated successfully',
+				code: StatusCodes.OK,
+				data: updatedReview,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -89,25 +101,33 @@ class ReviewController {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Review ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Review ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			await ReviewService.deleteReview(id);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Review deleted successfully',
-				StatusCodes.OK
-			);
+				message: 'Review deleted successfully',
+				code: StatusCodes.OK,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -115,7 +135,7 @@ class ReviewController {
 	getAllReviews = catchAsync(async (req, res) => {
 		try {
 			const { page = 1, limit = 10, rating, productId, userId } = req.query;
-			
+
 			const filters = {};
 			if (rating) filters.rating = parseInt(rating);
 			if (productId) filters.productId = productId;
@@ -127,14 +147,18 @@ class ReviewController {
 			};
 
 			const result = await ReviewService.getAllReviews(filters, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Reviews retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'Reviews retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -143,26 +167,34 @@ class ReviewController {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Review ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Review ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const review = await ReviewService.getReviewById(id);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Review retrieved successfully',
-				StatusCodes.OK,
-				review
-			);
+				message: 'Review retrieved successfully',
+				code: StatusCodes.OK,
+				data: review,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -172,11 +204,11 @@ class ReviewController {
 		const { page = 1, limit = 10 } = req.query;
 
 		if (!productId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Product ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
@@ -185,15 +217,22 @@ class ReviewController {
 				limit: parseInt(limit),
 			};
 
-			const result = await ReviewService.getReviewsByProductId(productId, options);
-			return formatSuccess(
-				res,
-				'Product reviews retrieved successfully',
-				StatusCodes.OK,
-				result
+			const result = await ReviewService.getReviewsByProductId(
+				productId,
+				options
 			);
+			return formatSuccess({
+				res,
+				message: 'Product reviews retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -209,14 +248,18 @@ class ReviewController {
 			};
 
 			const result = await ReviewService.getReviewsByUserId(userId, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'User reviews retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'User reviews retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -226,11 +269,11 @@ class ReviewController {
 		const { page = 1, limit = 10 } = req.query;
 
 		if (!userId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'User ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
@@ -240,14 +283,18 @@ class ReviewController {
 			};
 
 			const result = await ReviewService.getReviewsByUserId(userId, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'User reviews retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'User reviews retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -256,23 +303,27 @@ class ReviewController {
 		const { productId } = req.params;
 
 		if (!productId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Product ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const stats = await ReviewService.getProductReviewStats(productId);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Product review statistics retrieved successfully',
-				StatusCodes.OK,
-				stats
-			);
+				message: 'Product review statistics retrieved successfully',
+				code: StatusCodes.OK,
+				data: stats,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 }

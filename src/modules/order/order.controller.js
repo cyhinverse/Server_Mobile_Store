@@ -24,25 +24,29 @@ class OrderController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			value.userId = req.user.id;
 			const order = await OrderService.createOrder(value);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order created successfully',
-				StatusCodes.CREATED,
-				order
-			);
+				message: 'Order created successfully',
+				code: StatusCodes.CREATED,
+				data: order,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -51,26 +55,34 @@ class OrderController {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Order ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Order ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const order = await OrderService.getOrderById(id);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order retrieved successfully',
-				StatusCodes.OK,
-				order
-			);
+				message: 'Order retrieved successfully',
+				code: StatusCodes.OK,
+				data: order,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -104,29 +116,33 @@ class OrderController {
 		const { page = 1, limit = 10, status } = req.query;
 
 		if (!userId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'User ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'User ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const options = {
 				page: parseInt(page),
 				limit: parseInt(limit),
-				status
+				status,
 			};
 
 			const result = await OrderService.getOrdersByUserId(userId, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'User orders retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'User orders retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -158,14 +174,18 @@ class OrderController {
 			};
 
 			const result = await OrderService.getAllOrders(filters, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Orders retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'Orders retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -175,11 +195,11 @@ class OrderController {
 		const { page = 1, limit = 10 } = req.query;
 
 		if (!status) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Status is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Status is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
@@ -189,17 +209,25 @@ class OrderController {
 			};
 
 			const result = await OrderService.getOrdersByStatus(status, options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Orders by status retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'Orders by status retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
 			if (error.message.includes('Invalid status')) {
-				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.BAD_REQUEST,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -214,30 +242,42 @@ class OrderController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			const order = await OrderService.updateOrderStatus(id, value.status);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order status updated successfully',
-				StatusCodes.OK,
-				order
-			);
+				message: 'Order status updated successfully',
+				code: StatusCodes.OK,
+				data: order,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
 			if (error.message.includes('Invalid status')) {
-				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.BAD_REQUEST,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -252,27 +292,35 @@ class OrderController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			const order = await OrderService.updateOrderNote(id, value.note);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order note updated successfully',
-				StatusCodes.OK,
-				order
-			);
+				message: 'Order note updated successfully',
+				code: StatusCodes.OK,
+				data: order,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -287,30 +335,45 @@ class OrderController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
-			const order = await OrderService.updatePaymentMethod(id, value.paymentMethod);
-			return formatSuccess(
-				res,
-				'Payment method updated successfully',
-				StatusCodes.OK,
-				order
+			const order = await OrderService.updatePaymentMethod(
+				id,
+				value.paymentMethod
 			);
+			return formatSuccess({
+				res,
+				message: 'Payment method updated successfully',
+				code: StatusCodes.OK,
+				data: order,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
 			if (error.message.includes('Invalid payment method')) {
-				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.BAD_REQUEST,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -319,29 +382,44 @@ class OrderController {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Order ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Order ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const order = await OrderService.cancelOrder(id);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order cancelled successfully',
-				StatusCodes.OK,
-				order
-			);
+				message: 'Order cancelled successfully',
+				code: StatusCodes.OK,
+				data: order,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			if (error.message.includes('Cannot cancel') || error.message.includes('already cancelled')) {
-				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			if (
+				error.message.includes('Cannot cancel') ||
+				error.message.includes('already cancelled')
+			) {
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.BAD_REQUEST,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -350,25 +428,33 @@ class OrderController {
 		const { id } = req.params;
 
 		if (!id) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Order ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Order ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			await OrderService.deleteOrder(id);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order deleted successfully',
-				StatusCodes.OK
-			);
+				message: 'Order deleted successfully',
+				code: StatusCodes.OK,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -376,14 +462,18 @@ class OrderController {
 	getOrderStats = catchAsync(async (req, res) => {
 		try {
 			const stats = await OrderService.getOrderStats();
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Order statistics retrieved successfully',
-				StatusCodes.OK,
-				stats
-			);
+				message: 'Order statistics retrieved successfully',
+				code: StatusCodes.OK,
+				data: stats,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -397,12 +487,12 @@ class OrderController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
@@ -412,18 +502,33 @@ class OrderController {
 				limit: parseInt(limit),
 			};
 
-			const result = await OrderService.getOrdersByDateRange(startDate, endDate, options);
-			return formatSuccess(
-				res,
-				'Orders by date range retrieved successfully',
-				StatusCodes.OK,
-				result
+			const result = await OrderService.getOrdersByDateRange(
+				startDate,
+				endDate,
+				options
 			);
+			return formatSuccess({
+				res,
+				message: 'Orders by date range retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			if (error.message.includes('Invalid date') || error.message.includes('before end date')) {
-				return formatFail(res, error.message, StatusCodes.BAD_REQUEST);
+			if (
+				error.message.includes('Invalid date') ||
+				error.message.includes('before end date')
+			) {
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.BAD_REQUEST,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 }

@@ -11,14 +11,22 @@ const checkPermission = (requiredRolesOrPermissions) => {
 			});
 		}
 
+		// Admin bypass - admin có thể truy cập tất cả
+		const userRoles = user.roles || user.role || [];
+		const rolesArray = Array.isArray(userRoles) ? userRoles : [userRoles];
+		
+		if (rolesArray.includes('admin')) {
+			return next();
+		}
+
 		// Convert to array if single value
 		const required = Array.isArray(requiredRolesOrPermissions)
 			? requiredRolesOrPermissions
 			: [requiredRolesOrPermissions];
 
 		// Check if user has required role
-		const userRole = user.role || user.roles;
-		if (required.includes(userRole)) {
+		const hasRole = required.some(req => rolesArray.includes(req));
+		if (hasRole) {
 			return next();
 		}
 

@@ -24,12 +24,12 @@ class WishListController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
@@ -37,17 +37,25 @@ class WishListController {
 			const { productId } = value;
 
 			const wishlist = await WishlistService.addToWishlist(userId, productId);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Product added to wishlist successfully',
-				StatusCodes.OK,
-				wishlist
-			);
+				message: 'Product added to wishlist successfully',
+				code: StatusCodes.OK,
+				data: wishlist,
+			});
 		} catch (error) {
 			if (error.message.includes('already exists')) {
-				return formatFail(res, error.message, StatusCodes.CONFLICT);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.CONFLICT,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -56,27 +64,38 @@ class WishListController {
 		const { productId } = req.params;
 
 		if (!productId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Product ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const userId = req.user.id;
-			const wishlist = await WishlistService.removeFromWishlist(userId, productId);
-			return formatSuccess(
-				res,
-				'Product removed from wishlist successfully',
-				StatusCodes.OK,
-				wishlist
+			const wishlist = await WishlistService.removeFromWishlist(
+				userId,
+				productId
 			);
+			return formatSuccess({
+				res,
+				message: 'Product removed from wishlist successfully',
+				code: StatusCodes.OK,
+				data: wishlist,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -85,14 +104,18 @@ class WishListController {
 		try {
 			const userId = req.user.id;
 			const wishlist = await WishlistService.getUserWishlist(userId);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Wishlist retrieved successfully',
-				StatusCodes.OK,
-				wishlist
-			);
+				message: 'Wishlist retrieved successfully',
+				code: StatusCodes.OK,
+				data: wishlist,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -101,17 +124,25 @@ class WishListController {
 		try {
 			const userId = req.user.id;
 			const wishlist = await WishlistService.clearWishlist(userId);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Wishlist cleared successfully',
-				StatusCodes.OK,
-				wishlist
-			);
+				message: 'Wishlist cleared successfully',
+				code: StatusCodes.OK,
+				data: wishlist,
+			});
 		} catch (error) {
 			if (error.message.includes('not found')) {
-				return formatFail(res, error.message, StatusCodes.NOT_FOUND);
+				return formatFail({
+					res,
+					message: error.message,
+					code: StatusCodes.NOT_FOUND,
+				});
 			}
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -125,27 +156,34 @@ class WishListController {
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
-			return formatFail(
+			return formatFail({
 				res,
-				'Validation failed',
-				StatusCodes.BAD_REQUEST,
-				errorMessages
-			);
+				message: 'Validation failed',
+				code: StatusCodes.BAD_REQUEST,
+				errors: errorMessages,
+			});
 		}
 
 		try {
 			const userId = req.user.id;
 			const { productId } = value;
 
-			const wishlist = await WishlistService.toggleProductInWishlist(userId, productId);
-			return formatSuccess(
-				res,
-				'Wishlist updated successfully',
-				StatusCodes.OK,
-				wishlist
+			const wishlist = await WishlistService.toggleProductInWishlist(
+				userId,
+				productId
 			);
+			return formatSuccess({
+				res,
+				message: 'Wishlist updated successfully',
+				code: StatusCodes.OK,
+				data: wishlist,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -154,24 +192,31 @@ class WishListController {
 		const { productId } = req.params;
 
 		if (!productId) {
-			return formatFail(
+			return formatFail({
 				res,
-				'Product ID is required',
-				StatusCodes.BAD_REQUEST
-			);
+				message: 'Product ID is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
 		}
 
 		try {
 			const userId = req.user.id;
-			const isInWishlist = await WishlistService.isProductInWishlist(userId, productId);
-			return formatSuccess(
-				res,
-				'Product wishlist status retrieved successfully',
-				StatusCodes.OK,
-				{ isInWishlist }
+			const isInWishlist = await WishlistService.isProductInWishlist(
+				userId,
+				productId
 			);
+			return formatSuccess({
+				res,
+				message: 'Product wishlist status retrieved successfully',
+				code: StatusCodes.OK,
+				data: { isInWishlist },
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -180,14 +225,18 @@ class WishListController {
 		try {
 			const userId = req.user.id;
 			const countData = await WishlistService.getWishlistCount(userId);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'Wishlist count retrieved successfully',
-				StatusCodes.OK,
-				countData
-			);
+				message: 'Wishlist count retrieved successfully',
+				code: StatusCodes.OK,
+				data: countData,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 
@@ -201,14 +250,18 @@ class WishListController {
 			};
 
 			const result = await WishlistService.getAllWishlists(options);
-			return formatSuccess(
+			return formatSuccess({
 				res,
-				'All wishlists retrieved successfully',
-				StatusCodes.OK,
-				result
-			);
+				message: 'All wishlists retrieved successfully',
+				code: StatusCodes.OK,
+				data: result,
+			});
 		} catch (error) {
-			return formatError(res, error.message, StatusCodes.INTERNAL_SERVER_ERROR);
+			return formatError({
+				res,
+				message: error.message,
+				code: StatusCodes.INTERNAL_SERVER_ERROR,
+			});
 		}
 	});
 }
