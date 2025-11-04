@@ -44,19 +44,19 @@ class CategoryService extends BaseService {
 	/**
 	 * Get all categories
 	 */
-	getAllCategories = catchAsync(async () => {
+	getAllCategories = async () => {
 		return await this.categoryRepo.findAll();
-	});
+	};
 
 	/**
 	 * Get category by ID
 	 */
 	getCategoryById = catchAsync(async (id) => {
 		if (!id) throw new Error('Category ID is required');
-		
+
 		const category = await this.categoryRepo.findById(id);
 		if (!category) throw new Error('Category not found');
-		
+
 		return category;
 	});
 
@@ -65,10 +65,10 @@ class CategoryService extends BaseService {
 	 */
 	getCategoryBySlug = catchAsync(async (slug) => {
 		if (!slug) throw new Error('Category slug is required');
-		
+
 		const category = await this.categoryRepo.findBySlug(slug);
 		if (!category) throw new Error('Category not found');
-		
+
 		return category;
 	});
 
@@ -82,17 +82,20 @@ class CategoryService extends BaseService {
 	/**
 	 * Get categories with pagination
 	 */
-	getCategoriesPaginated = catchAsync(async ({ page = 1, limit = 10, search = '' }) => {
-		// Business logic: Validate pagination parameters
-		if (page < 1) throw new Error('Page must be greater than 0');
-		if (limit < 1 || limit > 100) throw new Error('Limit must be between 1 and 100');
+	getCategoriesPaginated = catchAsync(
+		async ({ page = 1, limit = 10, search = '' }) => {
+			// Business logic: Validate pagination parameters
+			if (page < 1) throw new Error('Page must be greater than 0');
+			if (limit < 1 || limit > 100)
+				throw new Error('Limit must be between 1 and 100');
 
-		return await this.categoryRepo.findWithPagination(
-			parseInt(page),
-			parseInt(limit),
-			search
-		);
-	});
+			return await this.categoryRepo.findWithPagination(
+				parseInt(page),
+				parseInt(limit),
+				search
+			);
+		}
+	);
 
 	/**
 	 * Get children categories by parent ID

@@ -43,11 +43,14 @@ class CategoryController extends BaseController {
 	 * GET /api/categories
 	 */
 	getAllCategories = catchAsync(async (req, res) => {
-		const categories = await categoryService.getAllCategories();
+		const result = await categoryService.getAllCategories();
+
+		// BaseRepository.findAll returns { data, pagination }
+		const categories = result?.data || result || [];
 
 		return formatSuccess({
 			res,
-			data: categories,
+			data: { categories },
 			message: 'Categories retrieved successfully',
 			code: StatusCodes.OK,
 		});

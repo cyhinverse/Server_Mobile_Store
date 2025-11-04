@@ -58,7 +58,7 @@ router.delete(
 router.post(
 	'/',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['notifications.create']),
 	validateData(NotificationValidation.createNotification),
 	notificationController.createNotification
 );
@@ -66,7 +66,7 @@ router.post(
 router.post(
 	'/system',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['notifications.create']),
 	validateData(NotificationValidation.createSystemNotification),
 	notificationController.createSystemNotification
 );
@@ -74,7 +74,7 @@ router.post(
 router.get(
 	'/type/:type',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['notifications.read']),
 	validateData(NotificationValidation.getNotifications, 'query'),
 	notificationController.getNotificationsByType
 );
@@ -82,7 +82,7 @@ router.get(
 router.delete(
 	'/cleanup/expired',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['notifications.delete']),
 	notificationController.cleanupExpiredNotifications
 );
 

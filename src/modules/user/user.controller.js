@@ -434,6 +434,153 @@ class UserController extends BaseController {
 			code: StatusCodes.OK,
 		});
 	});
+
+	/**
+	 * Update user profile (phone, dayOfBirth, isStudent, isTeacher)
+	 */
+	updateProfile = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.updateProfileValidation.validate({
+			userId,
+			...req.body,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const user = await this.userService.updateProfile(userId, req.body);
+
+		return formatSuccess({
+			res,
+			data: user,
+			message: 'Profile updated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Resend verification code
+	 */
+	resendVerificationCode = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.resendVerificationCodeValidation.validate({
+			userId,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const result = await this.userService.resendVerificationCode(userId);
+
+		return formatSuccess({
+			res,
+			data: result,
+			message: 'Verification code sent successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Generate QR code for 2FA
+	 */
+	generateQRCode = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+
+		// Validation
+		const { error } = UserValidation.generateQRCodeValidation.validate({
+			userId,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const qrCode = await this.userService.generateQRCode(userId);
+
+		return formatSuccess({
+			res,
+			data: qrCode,
+			message: 'QR code generated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Verify QR code for 2FA
+	 */
+	verifyQRCode = catchAsync(async (req, res) => {
+		const { userId } = req.params;
+		const { code } = req.body;
+
+		// Validation
+		const { error } = UserValidation.verifyQRCodeValidation.validate({
+			userId,
+			code,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const result = await this.userService.verifyQRCode(userId, code);
+
+		return formatSuccess({
+			res,
+			data: result,
+			message: 'QR code verified successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get students (Admin/Teacher function)
+	 */
+	getStudents = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10 } = req.query;
+
+		const students = await this.userService.getStudents({ page, limit });
+
+		return formatSuccess({
+			res,
+			data: students,
+			message: 'Students retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Get teachers (Admin function)
+	 */
+	getTeachers = catchAsync(async (req, res) => {
+		const { page = 1, limit = 10 } = req.query;
+
+		const teachers = await this.userService.getTeachers({ page, limit });
+
+		return formatSuccess({
+			res,
+			data: teachers,
+			message: 'Teachers retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
 }
 
 export default new UserController();

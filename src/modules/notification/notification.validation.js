@@ -14,15 +14,20 @@ const NotificationValidation = {
 			'number.min': 'Limit must be at least 1',
 			'number.max': 'Limit cannot exceed 100',
 		}),
-		status: joi.string().valid('unread', 'read', 'deleted').optional().messages({
-			'any.only': 'Status must be one of: unread, read, deleted',
-		}),
+		status: joi
+			.string()
+			.valid('unread', 'read', 'deleted')
+			.optional()
+			.messages({
+				'any.only': 'Status must be one of: unread, read, deleted',
+			}),
 		type: joi
 			.string()
 			.valid('order', 'promotion', 'system', 'account', 'delivery')
 			.optional()
 			.messages({
-				'any.only': 'Type must be one of: order, promotion, system, account, delivery',
+				'any.only':
+					'Type must be one of: order, promotion, system, account, delivery',
 			}),
 		sort: joi
 			.string()
@@ -55,7 +60,8 @@ const NotificationValidation = {
 			.messages({
 				'string.empty': 'Notification type is required',
 				'any.required': 'Notification type is required',
-				'any.only': 'Type must be one of: order, promotion, system, account, delivery',
+				'any.only':
+					'Type must be one of: order, promotion, system, account, delivery',
 			}),
 	}),
 
@@ -77,7 +83,8 @@ const NotificationValidation = {
 			.messages({
 				'string.empty': 'Type is required',
 				'any.required': 'Type is required',
-				'any.only': 'Type must be one of: order, promotion, system, account, delivery',
+				'any.only':
+					'Type must be one of: order, promotion, system, account, delivery',
 			}),
 		title: joi
 			.alternatives()
@@ -90,7 +97,8 @@ const NotificationValidation = {
 			)
 			.required()
 			.messages({
-				'alternatives.match': 'Title must be a string or object with vi/en properties',
+				'alternatives.match':
+					'Title must be a string or object with vi/en properties',
 				'any.required': 'Title is required',
 			}),
 		content: joi
@@ -104,7 +112,8 @@ const NotificationValidation = {
 			)
 			.required()
 			.messages({
-				'alternatives.match': 'Content must be a string or object with vi/en properties',
+				'alternatives.match':
+					'Content must be a string or object with vi/en properties',
 				'any.required': 'Content is required',
 			}),
 		metadata: joi.object().optional(),
@@ -149,7 +158,8 @@ const NotificationValidation = {
 			)
 			.required()
 			.messages({
-				'alternatives.match': 'Title must be a string or object with vi/en properties',
+				'alternatives.match':
+					'Title must be a string or object with vi/en properties',
 				'any.required': 'Title is required',
 			}),
 		content: joi
@@ -163,7 +173,8 @@ const NotificationValidation = {
 			)
 			.required()
 			.messages({
-				'alternatives.match': 'Content must be a string or object with vi/en properties',
+				'alternatives.match':
+					'Content must be a string or object with vi/en properties',
 				'any.required': 'Content is required',
 			}),
 		metadata: joi.object().optional(),
@@ -196,7 +207,8 @@ const NotificationValidation = {
 			.messages({
 				'string.empty': 'Order status is required',
 				'any.required': 'Order status is required',
-				'any.only': 'Order status must be one of: confirmed, shipped, delivered, cancelled',
+				'any.only':
+					'Order status must be one of: confirmed, shipped, delivered, cancelled',
 			}),
 		orderData: joi
 			.object({
@@ -252,6 +264,56 @@ const NotificationValidation = {
 			.required()
 			.messages({
 				'any.required': 'Promotion data is required',
+			}),
+	}),
+
+	// Alias for route compatibility
+	getNotifications: joi.object({
+		page: joi.number().integer().min(1).optional().messages({
+			'number.base': 'Page must be a number',
+			'number.integer': 'Page must be an integer',
+			'number.min': 'Page must be at least 1',
+		}),
+		limit: joi.number().integer().min(1).max(100).optional().messages({
+			'number.base': 'Limit must be a number',
+			'number.integer': 'Limit must be an integer',
+			'number.min': 'Limit must be at least 1',
+			'number.max': 'Limit cannot exceed 100',
+		}),
+		status: joi
+			.string()
+			.valid('unread', 'read', 'deleted')
+			.optional()
+			.messages({
+				'any.only': 'Status must be one of: unread, read, deleted',
+			}),
+		type: joi
+			.string()
+			.valid('order', 'promotion', 'system', 'account', 'delivery')
+			.optional()
+			.messages({
+				'any.only':
+					'Type must be one of: order, promotion, system, account, delivery',
+			}),
+		sort: joi
+			.string()
+			.valid('newest', 'oldest', 'priority', 'type')
+			.optional()
+			.messages({
+				'any.only': 'Sort must be one of: newest, oldest, priority, type',
+			}),
+	}),
+
+	// Mongo ID validation
+	mongoId: joi.object({
+		id: joi
+			.string()
+			.pattern(/^[0-9a-fA-F]{24}$/)
+			.required()
+			.messages({
+				'string.empty': 'ID is required',
+				'string.pattern.base': 'Invalid ID format',
+				'any.required': 'ID is required',
 			}),
 	}),
 };

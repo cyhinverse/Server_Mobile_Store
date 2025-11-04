@@ -21,8 +21,15 @@ const categorySchema = new Schema(
 		},
 		description: {
 			type: String,
-			required: true,
 			trim: true,
+		},
+		image: {
+			type: String,
+			default: null,
+		},
+		isActive: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	{

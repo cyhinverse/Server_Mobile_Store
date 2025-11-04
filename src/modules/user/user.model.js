@@ -31,7 +31,6 @@ const userSchema = new Schema(
 			default: [],
 		},
 		address: [addressSchema],
-
 		order_id: {
 			type: Types.ObjectId,
 			ref: 'Order',

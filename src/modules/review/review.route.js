@@ -5,8 +5,6 @@ import { validateData } from '../../middlewares/validation.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
 
-
-
 const router = Router();
 
 // User routes (cần auth)
@@ -17,11 +15,7 @@ router.post(
 	ReviewController.createReview
 );
 
-router.get(
-	'/my-reviews',
-	authMiddleware,
-	ReviewController.getMyReviews
-);
+router.get('/my-reviews', authMiddleware, ReviewController.getMyReviews);
 
 router.get(
 	'/:id',
@@ -48,13 +42,13 @@ router.delete(
 // Product review routes (public)
 router.get(
 	'/product/:productId',
-	validateData(ReviewValidation.mongoId, 'params'),
+	validateData(ReviewValidation.productIdParam, 'params'),
 	ReviewController.getReviewsByProductId
 );
 
 router.get(
 	'/product/:productId/stats',
-	validateData(ReviewValidation.mongoId, 'params'),
+	validateData(ReviewValidation.productIdParam, 'params'),
 	ReviewController.getProductReviewStats
 );
 
@@ -62,15 +56,15 @@ router.get(
 router.get(
 	'/admin/all',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['admin', 'reviews.moderate']),
 	ReviewController.getAllReviews
 );
 
 router.get(
 	'/admin/user/:userId',
 	authMiddleware,
-	checkPermission(['admin']),
-	validateData(ReviewValidation.mongoId, 'params'),
+	checkPermission(['admin', 'reviews.moderate']),
+	validateData(ReviewValidation.userIdParam, 'params'),
 	ReviewController.getReviewsByUserId
 );
 

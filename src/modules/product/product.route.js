@@ -25,12 +25,12 @@ router.get('/category/:categoryId', ProductController.getProductsByCategory);
 router.get('/by-slug/:slug', ProductController.getProductsBySlug);
 
 // ===================== CRUD ROUTES =====================
-// Create product
+// Create product (Admin only)
 router.post(
 	'/',
+	authMiddleware,
+	checkPermission(['product:create']),
 	validateData(ValidationProduct.createProduct),
-	// authMiddleware,
-	// checkPermission('product:create'),
 	ProductController.createProduct
 );
 

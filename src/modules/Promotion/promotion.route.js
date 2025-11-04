@@ -1,42 +1,77 @@
 import express from 'express';
+import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 import PromotionController from './promotion.controller.js';
 
 const router = express.Router();
 
-// Create a new promotion
-router.post('/create', PromotionController.createPromotion);
-
-// Get all promotions with pagination and filtering
+// ==================== PUBLIC ROUTES ====================
+// Get all promotions with pagination and filtering (Public)
 router.get('/', PromotionController.getAllPromotions);
 
-// Get active promotions only
+// Get active promotions only (Public)
 router.get('/active', PromotionController.getActivePromotions);
 
-// Get expired promotions
+// Get expired promotions (Public)
 router.get('/expired', PromotionController.getExpiredPromotions);
 
-// Get upcoming promotions
+// Get upcoming promotions (Public)
 router.get('/upcoming', PromotionController.getUpcomingPromotions);
 
-// Get promotions by product ID
+// Get promotions by product ID (Public)
 router.get('/product/:productId', PromotionController.getPromotionsByProduct);
 
-// Get promotion by ID
+// Get promotion by ID (Public)
 router.get('/:id', PromotionController.getPromotionById);
 
-// Update promotion by ID
-router.put('/:id', PromotionController.updatePromotion);
+// ==================== ADMIN ROUTES ====================
+// Create a new promotion (Admin only)
+router.post(
+	'/create',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_CREATE]),
+	PromotionController.createPromotion
+);
 
-// Toggle promotion status (active/inactive)
-router.patch('/:id/toggle', PromotionController.togglePromotionStatus);
+// Update promotion by ID (Admin only)
+router.put(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_UPDATE]),
+	PromotionController.updatePromotion
+);
 
-// Add products to promotion
-router.post('/:id/products', PromotionController.addProductsToPromotion);
+// Toggle promotion status (Admin only)
+router.patch(
+	'/:id/toggle',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_UPDATE]),
+	PromotionController.togglePromotionStatus
+);
 
-// Remove products from promotion
-router.delete('/:id/products', PromotionController.removeProductsFromPromotion);
+// Add products to promotion (Admin only)
+router.post(
+	'/:id/products',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_UPDATE]),
+	PromotionController.addProductsToPromotion
+);
 
-// Delete promotion by ID
-router.delete('/:id', PromotionController.deletePromotion);
+// Remove products from promotion (Admin only)
+router.delete(
+	'/:id/products',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_UPDATE]),
+	PromotionController.removeProductsFromPromotion
+);
+
+// Delete promotion by ID (Admin only)
+router.delete(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_DELETE]),
+	PromotionController.deletePromotion
+);
 
 export default router;

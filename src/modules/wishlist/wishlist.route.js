@@ -5,8 +5,6 @@ import { validateData } from '../../middlewares/validation.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
 
-
-
 const router = Router();
 
 // User routes (cần auth)
@@ -48,7 +46,7 @@ router.get('/count', authMiddleware, WishListController.getWishlistCount);
 router.get(
 	'/admin/all',
 	authMiddleware,
-	checkPermission(['admin']),
+	checkPermission(['admin', 'wishlists.read']),
 	validateData(WishListValidation.query, 'query'),
 	WishListController.getAllWishlists
 );

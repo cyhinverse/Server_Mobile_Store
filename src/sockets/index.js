@@ -2,7 +2,6 @@ import { Server } from 'socket.io';
 import { notificationSocket } from './notification.socket.js';
 
 export const initSocketIo = (server) => {
-	// Initialize Socket.IO with the provided server
 	const io = new Server(server, {
 		cors: {
 			origin: '*',

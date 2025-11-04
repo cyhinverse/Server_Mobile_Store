@@ -4,11 +4,13 @@ import cartRouter from '../modules/cart/cart.route.js';
 import productRouter from '../modules/product/product.route.js';
 import wishListRouter from '../modules/wishlist/wishlist.route.js';
 import categoryRouter from '../modules/category/category.route.js';
-import promotionRouter from '../modules/Promotion/promotion.route.js';
+import promotionRouter from '../modules/Promotion/Promotion.route.js';
 import brandRouter from '../modules/brand/brand.route.js';
 import bannerRouter from '../modules/banner/banner.route.js';
 import notificationRouter from '../modules/notification/notification.route.js';
 import orderRouter from '../modules/order/order.route.js';
+import discountRouter from '../modules/discount/discount.route.js';
+import reviewRouter from '../modules/review/review.route.js';
 const routes = (app) => {
 	app.use('/api/v1/users', userRouter);
 	app.use('/api/v1/auth', authRouter);
@@ -21,6 +23,8 @@ const routes = (app) => {
 	app.use('/api/v1/banners', bannerRouter);
 	app.use('/api/v1/notifications', notificationRouter);
 	app.use('/api/v1/orders', orderRouter);
+	app.use('/api/v1/discounts', discountRouter);
+	app.use('/api/v1/reviews', reviewRouter);
 };
 
 export default routes;

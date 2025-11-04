@@ -1,10 +1,18 @@
 import express from 'express';
-const router = express.Router();
+import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
+const router = express.Router();
 import CategoryController from './category.controller.js';
 
-// Create category
-router.post('/', CategoryController.createCategory);
+// Create category (Admin only)
+router.post(
+	'/',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.CATEGORY_CREATE]),
+	CategoryController.createCategory
+);
 
 // Get category statistics
 router.get('/stats', CategoryController.getCategoryStats);
@@ -27,13 +35,23 @@ router.get('/slug/:slug', CategoryController.getCategoryBySlug);
 // Get children categories by parent ID
 router.get('/:parentId/children', CategoryController.getChildrenCategories);
 
-// Get category by ID
+// Get category by ID (Public)
 router.get('/:id', CategoryController.getCategoryById);
 
-// Update category
-router.put('/:id', CategoryController.updateCategory);
+// Update category (Admin only)
+router.put(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.CATEGORY_UPDATE]),
+	CategoryController.updateCategory
+);
 
-// Delete category
-router.delete('/:id', CategoryController.deleteCategory);
+// Delete category (Admin only)
+router.delete(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.CATEGORY_DELETE]),
+	CategoryController.deleteCategory
+);
 
 export default router;

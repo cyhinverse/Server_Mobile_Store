@@ -18,6 +18,20 @@ router.get(
 	userController.getUserStats
 );
 
+// Get students (Admin/Teacher)
+router.get(
+	'/admin/students',
+	checkPermission(['admin']),
+	userController.getStudents
+);
+
+// Get teachers (Admin)
+router.get(
+	'/admin/teachers',
+	checkPermission(['admin']),
+	userController.getTeachers
+);
+
 // Create new user
 router.post('/', checkPermission(['admin']), userController.createUser);
 
@@ -36,6 +50,21 @@ router.delete(
 	checkPermission(['admin']),
 	userController.deleteUser
 );
+
+/**
+ * PROFILE MANAGEMENT ROUTES (User can update their own profile)
+ */
+// Update user profile (phone, dayOfBirth, isStudent, isTeacher)
+router.patch('/:userId/profile', userController.updateProfile);
+
+// Resend verification code
+router.post('/:userId/resend-code', userController.resendVerificationCode);
+
+// Generate QR code for 2FA
+router.post('/:userId/qr-code/generate', userController.generateQRCode);
+
+// Verify QR code for 2FA
+router.post('/:userId/qr-code/verify', userController.verifyQRCode);
 
 /**
  * ADDRESS MANAGEMENT ROUTES

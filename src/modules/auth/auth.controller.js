@@ -95,7 +95,6 @@ class AuthController extends BaseController {
 				code: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
-		console.log(`userWithoutPassword`, userWithoutPassword);
 
 		return formatSuccess({
 			res,
@@ -601,9 +600,9 @@ class AuthController extends BaseController {
 		});
 	});
 	getAllRoles = catchAsync(async (req, res) => {
-		// Lấy enum values từ schema definition
 		const rolesSchema = User.schema.paths.roles;
-		const rolesEnum = rolesSchema?.enumValues || rolesSchema?.options?.enum || ['user', 'admin'];
+		const rolesEnum = rolesSchema?.enumValues ||
+			rolesSchema?.options?.enum || ['user', 'admin'];
 
 		return formatSuccess({
 			res,
@@ -709,7 +708,6 @@ class AuthController extends BaseController {
 	assignPermissions = catchAsync(async (req, res) => {
 		const { id } = req.params;
 		const { permissions } = req.body;
-		console.log(`assignPermissions`, id, permissions);
 		if (!id || !permissions) {
 			return formatFail({
 				res,
@@ -791,7 +789,6 @@ class AuthController extends BaseController {
 			code: StatusCodes.OK,
 		});
 	});
-	
 }
 
 export default new AuthController();

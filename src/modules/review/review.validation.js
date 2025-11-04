@@ -39,16 +39,24 @@ export const ReviewValidation = {
 				'string.empty': 'ID is required!',
 				'string.pattern.base': 'ID must be a valid MongoDB ObjectId!',
 			}),
+	}),
+
+	productIdParam: Joi.object({
 		productId: Joi.string()
 			.pattern(/^[0-9a-fA-F]{24}$/)
-			.optional()
+			.required()
 			.messages({
+				'string.empty': 'Product ID is required!',
 				'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId!',
 			}),
+	}),
+
+	userIdParam: Joi.object({
 		userId: Joi.string()
 			.pattern(/^[0-9a-fA-F]{24}$/)
-			.optional()
+			.required()
 			.messages({
+				'string.empty': 'User ID is required!',
 				'string.pattern.base': 'User ID must be a valid MongoDB ObjectId!',
 			}),
 	}),

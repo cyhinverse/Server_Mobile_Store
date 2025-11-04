@@ -1,19 +1,42 @@
 import express from 'express';
-const router = express.Router();
+import authMiddleware from '../../middlewares/auth.js';
+import checkPermission from '../../middlewares/permission.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
+const router = express.Router();
 import BrandController from './brand.controller.js';
 
-// Create a new brand
-router.post('/', BrandController.create);
+// Create a new brand (Admin only)
+router.post(
+	'/',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.BRAND_CREATE]),
+	BrandController.create
+);
 
-// Delete a brand by ID
-router.delete('/:id', BrandController.delete);
+// Delete a brand by ID (Admin only)
+router.delete(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.BRAND_DELETE]),
+	BrandController.delete
+);
 
-// Update a brand by ID
-router.put('/:id', BrandController.update);
+// Update a brand by ID (Admin only)
+router.put(
+	'/:id',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.BRAND_UPDATE]),
+	BrandController.update
+);
 
-// Toggle brand status (active/inactive)
-router.patch('/:id/toggle-status', BrandController.toggleBrandStatus);
+// Toggle brand status (Admin only)
+router.patch(
+	'/:id/toggle-status',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.BRAND_UPDATE]),
+	BrandController.toggleBrandStatus
+);
 
 // Get all brands
 router.get('/all', BrandController.getAll);
