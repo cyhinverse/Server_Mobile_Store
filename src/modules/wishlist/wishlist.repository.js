@@ -14,10 +14,10 @@ class WishListRepository extends BaseRepository {
 				.populate({
 					path: 'products.product_id',
 					select:
-						'name price images description category_id brand_id stock status',
+						'name price images description category_id brand_id stock status slug thumbnail variants',
 					populate: [
-						{ path: 'category_id', select: 'name' },
-						{ path: 'brand_id', select: 'name' },
+						{ path: 'category_id', select: 'name slug' },
+						{ path: 'brand_id', select: 'name slug' },
 					],
 				})
 				.lean();
@@ -85,14 +85,24 @@ class WishListRepository extends BaseRepository {
 				.findByIdAndUpdate(
 					wishlist._id,
 					{
-						$push: { products: { product_id: productId } },
+						$push: {
+							products: {
+								product_id: productId,
+								addedAt: new Date(),
+							},
+						},
 						updatedAt: new Date(),
 					},
 					{ new: true }
 				)
 				.populate({
 					path: 'products.product_id',
-					select: 'name price images description',
+					select:
+						'name price images description category_id brand_id stock status slug thumbnail variants',
+					populate: [
+						{ path: 'category_id', select: 'name slug' },
+						{ path: 'brand_id', select: 'name slug' },
+					],
 				});
 
 			return {
@@ -121,7 +131,12 @@ class WishListRepository extends BaseRepository {
 				)
 				.populate({
 					path: 'products.product_id',
-					select: 'name price images description',
+					select:
+						'name price images description category_id brand_id stock status slug thumbnail variants',
+					populate: [
+						{ path: 'category_id', select: 'name slug' },
+						{ path: 'brand_id', select: 'name slug' },
+					],
 				});
 
 			if (!result) {

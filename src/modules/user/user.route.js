@@ -9,6 +9,15 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
+ * CURRENT USER ROUTES
+ */
+// Get current authenticated user
+router.get('/me', userController.getMe);
+
+// Update current user profile
+router.patch('/me', userController.updateMe);
+
+/**
  * USER MANAGEMENT ROUTES (Admin Only)
  */
 // Get user statistics (put this BEFORE other routes with parameters)
@@ -56,15 +65,6 @@ router.delete(
  */
 // Update user profile (phone, dayOfBirth, isStudent, isTeacher)
 router.patch('/:userId/profile', userController.updateProfile);
-
-// Resend verification code
-router.post('/:userId/resend-code', userController.resendVerificationCode);
-
-// Generate QR code for 2FA
-router.post('/:userId/qr-code/generate', userController.generateQRCode);
-
-// Verify QR code for 2FA
-router.post('/:userId/qr-code/verify', userController.verifyQRCode);
 
 /**
  * ADDRESS MANAGEMENT ROUTES

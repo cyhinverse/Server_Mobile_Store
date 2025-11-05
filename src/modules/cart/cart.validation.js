@@ -8,7 +8,6 @@ export const ValidationCart = {
 	 * Validation for adding item to cart
 	 */
 	addToCart: Joi.object({
-
 		productId: Joi.string().pattern(objectIdPattern).required().messages({
 			'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId',
 			'any.required': 'Product ID is required',
@@ -20,6 +19,28 @@ export const ValidationCart = {
 			'number.min': 'Quantity must be at least 1',
 			'number.max': 'Quantity cannot exceed 100',
 			'any.required': 'Quantity is required',
+		}),
+
+		// Optional fields for variant information
+		variantId: Joi.string().optional().messages({
+			'string.base': 'Variant ID must be a string',
+		}),
+
+		variantSku: Joi.string().optional().messages({
+			'string.base': 'Variant SKU must be a string',
+		}),
+
+		price: Joi.number().positive().optional().messages({
+			'number.base': 'Price must be a number',
+			'number.positive': 'Price must be a positive number',
+		}),
+
+		variantColor: Joi.string().optional().messages({
+			'string.base': 'Variant color must be a string',
+		}),
+
+		variantStorage: Joi.string().optional().messages({
+			'string.base': 'Variant storage must be a string',
 		}),
 	}),
 
@@ -27,11 +48,6 @@ export const ValidationCart = {
 	 * Validation for updating cart quantity
 	 */
 	updateQuantity: Joi.object({
-		userId: Joi.string().pattern(objectIdPattern).required().messages({
-			'string.pattern.base': 'User ID must be a valid MongoDB ObjectId',
-			'any.required': 'User ID is required',
-		}),
-
 		productId: Joi.string().pattern(objectIdPattern).required().messages({
 			'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId',
 			'any.required': 'Product ID is required',
@@ -44,20 +60,23 @@ export const ValidationCart = {
 			'number.max': 'Quantity cannot exceed 100',
 			'any.required': 'Quantity is required',
 		}),
+
+		variantSku: Joi.string().optional().messages({
+			'string.base': 'Variant SKU must be a string',
+		}),
 	}),
 
 	/**
 	 * Validation for removing item from cart
 	 */
 	removeFromCart: Joi.object({
-		userId: Joi.string().pattern(objectIdPattern).required().messages({
-			'string.pattern.base': 'User ID must be a valid MongoDB ObjectId',
-			'any.required': 'User ID is required',
-		}),
-
 		productId: Joi.string().pattern(objectIdPattern).required().messages({
 			'string.pattern.base': 'Product ID must be a valid MongoDB ObjectId',
 			'any.required': 'Product ID is required',
+		}),
+
+		variantSku: Joi.string().optional().messages({
+			'string.base': 'Variant SKU must be a string',
 		}),
 	}),
 

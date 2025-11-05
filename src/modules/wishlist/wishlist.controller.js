@@ -16,11 +16,14 @@ class WishListController {
 
 	// Add product to wishlist
 	addToWishlist = catchAsync(async (req, res) => {
-		const { error, value } = WishListValidation.addToWishlist.validate(req.body, {
-			abortEarly: false,
-			allowUnknown: false,
-			stripUnknown: true,
-		});
+		const { error, value } = WishListValidation.addToWishlist.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -104,11 +107,26 @@ class WishListController {
 		try {
 			const userId = req.user.id;
 			const wishlist = await WishlistService.getUserWishlist(userId);
+
+			// Format response to match frontend expectations
+			const wishlistItems = wishlist.products.map((item) => ({
+				id: item._id,
+				userId: wishlist.user_id,
+				productId: item.product_id?._id || item.product_id,
+				product: item.product_id,
+				addedAt: item.addedAt || wishlist.createdAt,
+			}));
+
 			return formatSuccess({
 				res,
 				message: 'Wishlist retrieved successfully',
 				code: StatusCodes.OK,
-				data: wishlist,
+				data: {
+					wishlistItems,
+					total: wishlistItems.length,
+					page: 1,
+					totalPages: 1,
+				},
 			});
 		} catch (error) {
 			return formatError({
@@ -148,11 +166,14 @@ class WishListController {
 
 	// Toggle product in wishlist (add if not exists, remove if exists)
 	toggleProductInWishlist = catchAsync(async (req, res) => {
-		const { error, value } = WishListValidation.addToWishlist.validate(req.body, {
-			abortEarly: false,
-			allowUnknown: false,
-			stripUnknown: true,
-		});
+		const { error, value } = WishListValidation.addToWishlist.validate(
+			req.body,
+			{
+				abortEarly: false,
+				allowUnknown: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
 			const errorMessages = error.details.map((err) => err.message);
@@ -168,15 +189,34 @@ class WishListController {
 			const userId = req.user.id;
 			const { productId } = value;
 
-			const wishlist = await WishlistService.toggleProductInWishlist(
+			const result = await WishlistService.toggleProductInWishlist(
 				userId,
 				productId
 			);
+
+			// Format wishlist item for frontend
+			let wishlistItem = null;
+			if (result.action === 'added' && result.wishlistItem) {
+				wishlistItem = {
+					id: result.wishlistItem._id,
+					userId: userId,
+					productId:
+						result.wishlistItem.product_id?._id ||
+						result.wishlistItem.product_id,
+					product: result.wishlistItem.product_id,
+					addedAt: result.wishlistItem.addedAt || new Date(),
+				};
+			}
+
 			return formatSuccess({
 				res,
 				message: 'Wishlist updated successfully',
 				code: StatusCodes.OK,
-				data: wishlist,
+				data: {
+					action: result.action,
+					productId: productId,
+					wishlistItem: wishlistItem,
+				},
 			});
 		} catch (error) {
 			return formatError({

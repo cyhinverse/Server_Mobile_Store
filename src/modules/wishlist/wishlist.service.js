@@ -110,11 +110,27 @@ class WishlistService {
 
 		const isInWishlist = await this.isProductInWishlist(userId, productId);
 
+		let result;
+		let action;
+
 		if (isInWishlist) {
-			return await this.removeFromWishlist(userId, productId);
+			result = await this.removeFromWishlist(userId, productId);
+			action = 'removed';
 		} else {
-			return await this.addToWishlist(userId, productId);
+			result = await this.addToWishlist(userId, productId);
+			action = 'added';
 		}
+
+		// Return format expected by frontend
+		return {
+			...result,
+			action,
+			productId,
+			wishlistItem:
+				action === 'added'
+					? result.products?.find((p) => p.product_id.toString() === productId)
+					: null,
+		};
 	}
 
 	// Get all wishlists (for admin)

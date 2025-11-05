@@ -15,6 +15,67 @@ class UserController extends BaseController {
 	}
 
 	/**
+	 * Get current authenticated user profile (/users/me)
+	 */
+	getMe = catchAsync(async (req, res) => {
+		const userId = req.user?.id || req.user?._id;
+
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
+			});
+		}
+
+		const user = await this.userService.getUserById(userId);
+
+		return formatSuccess({
+			res,
+			data: user,
+			message: 'Profile retrieved successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Update current user profile (/users/me)
+	 */
+	updateMe = catchAsync(async (req, res) => {
+		const userId = req.user?.id || req.user?._id;
+
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
+			});
+		}
+
+		// Validation
+		const { error } = UserValidation.updateProfileValidation.validate({
+			userId,
+			...req.body,
+		});
+		if (error) {
+			return formatFail({
+				res,
+				message: error.details[0].message,
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const user = await this.userService.updateProfile(userId, req.body);
+
+		return formatSuccess({
+			res,
+			data: user,
+			message: 'Profile updated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
 	 * Create new user (Admin function)
 	 */
 	createUser = catchAsync(async (req, res) => {

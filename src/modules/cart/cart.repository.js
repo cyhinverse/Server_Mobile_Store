@@ -57,72 +57,141 @@ class CartRepository extends BaseRepository {
 	}
 
 	/**
-	 * Find cart items by user ID
+	 * Find cart by user ID (returns single cart document with products array)
 	 */
 	async findByUserId(userId, populate = true) {
-		const query = this.model.find({ user_id: userId }).sort({ createdAt: -1 });
+		const query = this.model.findOne({ user_id: userId });
 
 		if (populate) {
 			query
-				.populate('product_id', 'name price imageUrl stock discount')
-				.populate('user_id', 'name email');
+				.populate('products.product_id', 'name price thumbnail stock')
+				.populate('user_id', 'fullName email');
 		}
 
-		return await query.lean();
+		const cart = await query.lean();
+
+		// If no cart exists, return empty structure
+		if (!cart) {
+			return {
+				user_id: userId,
+				products: [],
+			};
+		}
+
+		return cart;
 	}
 
 	/**
-	 * Find cart item by user and product
+	 * Find cart item by user and product (checks if product exists in products array)
 	 */
 	async findByUserAndProduct(userId, productId) {
-		return await this.model
+		const cart = await this.model
 			.findOne({
 				user_id: userId,
-				product_id: productId,
+				'products.product_id': productId,
 			})
-			.populate('product_id', 'name price imageUrl stock')
+			.lean();
+
+		if (!cart) return null;
+
+		// Find the specific product in the products array
+		const product = cart.products.find(
+			(p) => p.product_id.toString() === productId
+		);
+		return product || null;
+	}
+
+	/**
+	 * Update cart item quantity (updates quantity in products array)
+	 */
+	async updateQuantity(userId, productId, quantity, variantSku = null) {
+		const filter = {
+			user_id: userId,
+			'products.product_id': productId,
+		};
+
+		// If variantSku is provided, also match it
+		if (variantSku) {
+			filter['products.variant_sku'] = variantSku;
+		}
+
+		const update = variantSku
+			? {
+					$set: {
+						'products.$[elem].quantity': quantity,
+					},
+			  }
+			: {
+					$set: {
+						'products.$.quantity': quantity,
+					},
+			  };
+
+		const options = {
+			new: true,
+			runValidators: true,
+			arrayFilters: variantSku
+				? [{ 'elem.product_id': productId, 'elem.variant_sku': variantSku }]
+				: undefined,
+		};
+
+		return await this.model
+			.findOneAndUpdate(filter, update, options)
+			.populate('products.product_id', 'name price thumbnail stock')
 			.lean();
 	}
 
 	/**
-	 * Update cart item quantity
+	 * Remove cart item by user and product (removes from products array)
 	 */
-	async updateQuantity(userId, productId, quantity) {
+	async removeByUserAndProduct(userId, productId, variantSku = null) {
+		const filter = { user_id: userId };
+
+		const pullCondition = variantSku
+			? { product_id: productId, variant_sku: variantSku }
+			: { product_id: productId };
+
 		return await this.model
 			.findOneAndUpdate(
-				{ user_id: userId, product_id: productId },
-				{ quantity },
-				{ new: true, runValidators: true }
+				filter,
+				{
+					$pull: {
+						products: pullCondition,
+					},
+				},
+				{ new: true }
 			)
-			.populate('product_id', 'name price imageUrl stock')
+			.populate('products.product_id', 'name price thumbnail stock')
 			.lean();
 	}
 
 	/**
-	 * Remove cart item by user and product
-	 */
-	async removeByUserAndProduct(userId, productId) {
-		return await this.model.findOneAndDelete({
-			user_id: userId,
-			product_id: productId,
-		});
-	}
-
-	/**
-	 * Clear all cart items for a user
+	 * Clear all cart items for a user (clears products array)
 	 */
 	async clearUserCart(userId) {
-		return await this.model.deleteMany({ user_id: userId });
+		return await this.model.findOneAndUpdate(
+			{ user_id: userId },
+			{ $set: { products: [] } },
+			{ new: true }
+		);
 	}
 
 	/**
-	 * Bulk remove cart items
+	 * Bulk remove cart items (removes multiple products from products array)
 	 */
 	async bulkRemove(userId, productIds) {
-		return await this.model.deleteMany({
-			user_id: userId,
-			product_id: { $in: productIds },
-		});
+		return await this.model
+			.findOneAndUpdate(
+				{ user_id: userId },
+				{
+					$pull: {
+						products: { product_id: { $in: productIds } },
+					},
+				},
+				{ new: true }
+			)
+			.populate('products.product_id', 'name price thumbnail stock')
+			.lean();
 	}
 
 	/**

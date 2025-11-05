@@ -1,4 +1,3 @@
-
 import express from 'express';
 import passport from 'passport';
 import AuthController from './auth.controller.js';
@@ -16,10 +15,22 @@ router.post('/register', litmitRate, AuthController.register);
 router.post('/forgot-password', AuthController.forgotPassword);
 // POST /reset-password - Endpoint để hoàn tất đặt lại mật khẩu với mật khẩu mới
 router.post('/reset-password', AuthController.resetPassword);
+// POST /change-password - Endpoint để đổi mật khẩu (yêu cầu xác thực)
+router.post('/change-password', authMiddleware, AuthController.changePassword);
 // POST /send-verify-code - Endpoint để gửi mã xác minh email cho người dùng
 router.post('/send-verify-code', AuthController.sendCodeToVerifyEmail);
 // POST /verify-email - Endpoint để xác minh email người dùng bằng mã xác minh
 router.post('/verify-email', AuthController.verifyEmail);
+// POST /resend-verification-code - Endpoint để gửi lại mã xác minh (yêu cầu xác thực)
+router.post(
+	'/resend-verification-code',
+	authMiddleware,
+	AuthController.resendVerificationCode
+);
+// POST /2fa/qr-generate - Endpoint để tạo mã QR cho xác thực 2 bước (yêu cầu xác thực)
+router.post('/2fa/qr-generate', authMiddleware, AuthController.generateQRCode);
+// POST /2fa/qr-verify - Endpoint để xác minh mã QR cho xác thực 2 bước (yêu cầu xác thực)
+router.post('/2fa/qr-verify', authMiddleware, AuthController.verifyQRCode);
 // GET /auth/google - Khởi tạo luồng xác thực Google OAuth
 router.get(
 	'/auth/google',

@@ -299,6 +299,37 @@ const UserValidation = {
 			'any.required': 'User ID is required',
 		}),
 	}),
+
+	/**
+	 * Update profile validation
+	 */
+	updateProfileValidation: Joi.object({
+		userId: Joi.string().pattern(objectIdPattern).required().messages({
+			'string.pattern.base': 'Invalid user ID format',
+			'string.empty': 'User ID is required',
+			'any.required': 'User ID is required',
+		}),
+		fullName: Joi.string().trim().min(2).max(100).optional().messages({
+			'string.min': 'Full name must be at least 2 characters',
+			'string.max': 'Full name must not exceed 100 characters',
+		}),
+		phoneNumber: Joi.string()
+			.pattern(/^[0-9]{10,11}$/)
+			.optional()
+			.allow('')
+			.messages({
+				'string.pattern.base': 'Phone number must be 10-11 digits',
+			}),
+		dateOfBirth: Joi.date().optional().allow('', null).messages({
+			'date.base': 'Date of birth must be a valid date',
+		}),
+		isStudent: Joi.boolean().optional().messages({
+			'boolean.base': 'isStudent must be a boolean value',
+		}),
+		isTeacher: Joi.boolean().optional().messages({
+			'boolean.base': 'isTeacher must be a boolean value',
+		}),
+	}),
 };
 
 export default UserValidation;

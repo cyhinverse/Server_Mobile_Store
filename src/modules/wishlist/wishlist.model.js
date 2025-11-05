@@ -15,6 +15,10 @@ const wishListSchema = new Schema(
 					ref: 'Product',
 					required: true,
 				},
+				addedAt: {
+					type: Date,
+					default: Date.now,
+				},
 			},
 		],
 	},

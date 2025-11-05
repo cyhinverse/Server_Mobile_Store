@@ -18,9 +18,33 @@ class CartController extends BaseController {
 	 * POST /api/carts
 	 */
 	addToCart = catchAsync(async (req, res) => {
-		const userId = req.user.id
-		const {productId,quantity} = req.body;
-		const { error } = ValidationCart.addToCart.validate({userId,productId,quantity});
+		const userId = req.user.id;
+		const {
+			productId,
+			quantity,
+			variantId,
+			variantSku,
+			price,
+			variantColor,
+			variantStorage,
+		} = req.body;
+
+		// Validate only the request body (not userId from token)
+		const { error, value } = ValidationCart.addToCart.validate(
+			{
+				productId,
+				quantity,
+				variantId,
+				variantSku,
+				price,
+				variantColor,
+				variantStorage,
+			},
+			{
+				abortEarly: false,
+				stripUnknown: true,
+			}
+		);
 
 		if (error) {
 			return formatFail({
@@ -31,15 +55,26 @@ class CartController extends BaseController {
 			});
 		}
 
-		const cartItem = await cartService.addToCart(userId, productId, quantity);
+		// Prepare cart data with optional variant info
+		const cartData = {
+			productId,
+			quantity,
+			...(variantId && { variantId }),
+			...(variantSku && { variantSku }),
+			...(price && { price }),
+			...(variantColor && { variantColor }),
+			...(variantStorage && { variantStorage }),
+		};
 
-		if(!cartItem ||  cartItem === null){
+		const cartItem = await cartService.addToCart(userId, cartData);
+
+		if (!cartItem || cartItem === null) {
 			return formatFail({
 				res,
-				message: "Add product to cart faile!",
+				message: 'Add product to cart failed!',
 				code: 400,
-				errorCode: "400"
-			})
+				errorCode: '400',
+			});
 		}
 
 		return formatSuccess({
@@ -114,8 +149,15 @@ class CartController extends BaseController {
 			});
 		}
 
-		const { userId, productId, quantity } = req.body;
-		const cartItem = await cartService.updateCartQuantity(userId, productId, quantity);
+		const userId = req.user.id;
+		const { productId, quantity, variantSku } = req.body;
+
+		const cartItem = await cartService.updateCartQuantity(
+			userId,
+			productId,
+			quantity,
+			variantSku
+		);
 
 		return formatSuccess({
 			res,
@@ -140,12 +182,18 @@ class CartController extends BaseController {
 			});
 		}
 
-		const { userId, productId } = req.body;
-		await cartService.removeFromCart(userId, productId);
+		const userId = req.user.id;
+		const { productId, variantSku } = req.body;
+
+		const result = await cartService.removeFromCart(
+			userId,
+			productId,
+			variantSku
+		);
 
 		return formatSuccess({
 			res,
-			data: null,
+			data: result,
 			message: 'Item removed from cart successfully',
 			code: StatusCodes.OK,
 		});
@@ -244,7 +292,11 @@ class CartController extends BaseController {
 		}
 
 		const { userId, productId, decreaseBy } = req.body;
-		const result = await cartService.decreaseQuantity(userId, productId, decreaseBy);
+		const result = await cartService.decreaseQuantity(
+			userId,
+			productId,
+			decreaseBy
+		);
 
 		return formatSuccess({
 			res,

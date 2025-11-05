@@ -18,6 +18,8 @@ import {
 } from '../../shared/response/responseFormatter.js';
 import BaseController from '../../core/controller/base.controller.js';
 import { hashPassword, comparePassword } from '../../utils/password.util.js';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 dotenv.config();
 
 class AuthController extends BaseController {
@@ -786,6 +788,178 @@ class AuthController extends BaseController {
 			res,
 			data: user.permissions,
 			message: 'Get user permissions successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Resend verification code
+	 */
+	resendVerificationCode = catchAsync(async (req, res) => {
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
+			});
+		}
+
+		const user = await AuthService.findById(userId);
+		if (!user) {
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		if (user.verifyEmail) {
+			return formatFail({
+				res,
+				message: 'Email already verified',
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// Generate new code
+		const code = Math.floor(100000 + Math.random() * 900000).toString();
+		const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+		await AuthService.updateUser(userId, {
+			codeVerify: code,
+			codeExpiresAt: expiresAt,
+		});
+
+		// TODO: Send email with code using nodemailer
+		// await sendVerificationEmail(user.email, code);
+
+		return formatSuccess({
+			res,
+			data: { expiresAt },
+			message: 'Verification code sent successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Generate QR code for 2FA
+	 */
+	generateQRCode = catchAsync(async (req, res) => {
+		const userId = req.user?.id;
+
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
+			});
+		}
+
+		const user = await AuthService.findById(userId);
+		if (!user) {
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		// Generate TOTP secret using speakeasy
+		const secret = speakeasy.generateSecret({
+			name: `Mobile Store (${user.email})`,
+			issuer: 'Mobile Store',
+			length: 32,
+		});
+
+		// Generate QR code data URL
+		const qrCodeDataURL = await QRCode.toDataURL(secret.otpauth_url);
+
+		// Save secret to database
+		await AuthService.updateUser(userId, {
+			qr_code: secret.base32,
+			qrExpiresAt: null, // No expiry for TOTP secret
+		});
+
+		return formatSuccess({
+			res,
+			data: {
+				qr_code: qrCodeDataURL, // Return QR code as data URL image
+				secret: secret.base32, // Return secret for manual entry
+				otpauth_url: secret.otpauth_url,
+			},
+			message: 'QR code generated successfully',
+			code: StatusCodes.OK,
+		});
+	});
+
+	/**
+	 * Verify QR code for 2FA
+	 */
+	verifyQRCode = catchAsync(async (req, res) => {
+		const userId = req.user?.id;
+		const { code: token } = req.body;
+
+		if (!userId) {
+			return formatFail({
+				res,
+				message: 'User not authenticated',
+				code: StatusCodes.UNAUTHORIZED,
+			});
+		}
+
+		if (!token) {
+			return formatFail({
+				res,
+				message: 'Verification code is required',
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		const user = await AuthService.findById(userId);
+		if (!user) {
+			return formatFail({
+				res,
+				message: 'User not found',
+				code: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		if (!user.qr_code) {
+			return formatFail({
+				res,
+				message: 'No 2FA secret found. Please generate QR code first.',
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// Verify TOTP token using speakeasy
+		const verified = speakeasy.totp.verify({
+			secret: user.qr_code,
+			encoding: 'base32',
+			token: token,
+			window: 2, // Allow 2 time steps before and after
+		});
+
+		if (!verified) {
+			return formatFail({
+				res,
+				message: 'Invalid verification code',
+				code: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// Enable 2FA for user and keep the secret
+		await AuthService.updateUser(userId, {
+			twoFactorEnabled: true, // Enable 2FA
+			// Keep qr_code for future verifications
+		});
+
+		return formatSuccess({
+			res,
+			data: { verified: true, twoFactorEnabled: true },
+			message: 'QR code verified successfully. 2FA is now enabled.',
 			code: StatusCodes.OK,
 		});
 	});

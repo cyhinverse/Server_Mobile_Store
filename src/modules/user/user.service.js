@@ -275,7 +275,7 @@ class UserService extends BaseService {
 		// Only allow specific profile fields
 		const allowedFields = [
 			'phoneNumber',
-			'dayOfBirth',
+			'dateOfBirth',
 			'isStudent',
 			'isTeacher',
 			'fullName',

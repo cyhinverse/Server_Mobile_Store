@@ -15,7 +15,7 @@ const addressSchema = new Schema({
 const userSchema = new Schema(
 	{
 		fullName: { type: String, required: true, trim: true },
-		dayOfBirth: { type: Date },
+		dateOfBirth: { type: Date },
 		email: { type: String, required: true, unique: true },
 		phoneNumber: { type: String, unique: true },
 		password: { type: String, required: true },

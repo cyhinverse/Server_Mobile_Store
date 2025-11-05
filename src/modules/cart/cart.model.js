@@ -11,6 +11,28 @@ const products = {
 		required: true,
 		default: 1,
 	},
+	// Variant information (optional)
+	variant_id: {
+		type: String,
+		required: false,
+	},
+	variant_sku: {
+		type: String,
+		required: false,
+	},
+	price: {
+		type: Number,
+		required: false,
+	},
+	// Optional: Store variant details for display
+	variant_color: {
+		type: String,
+		required: false,
+	},
+	variant_storage: {
+		type: String,
+		required: false,
+	},
 };
 
 const cartSchema = new Schema(

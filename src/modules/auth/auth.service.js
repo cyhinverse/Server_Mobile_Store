@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
-import AuthRepository from './auth.repository.js';
+import authRepository from './auth.repository.js';
 import BaseService from '../../core/service/base.service.js';
 dotenv.config();
 class AuthService extends BaseService {
 	constructor() {
-		super(AuthRepository);
-		this.authRepo = AuthRepository;
+		super(authRepository);
+		this.authRepo = authRepository;
 	}
 	async verifyEmailCode(code) {
 		if (!code) {
@@ -24,7 +24,7 @@ class AuthService extends BaseService {
 		if (!userId || !updateData) {
 			throw new Error('User ID and update data are required');
 		}
-		return this.authRepo.findByIdAndUpdate(userId, updateData);
+		return this.authRepo.update(userId, updateData);
 	}
 	async getUsersByRole(role) {
 		if (!role) {

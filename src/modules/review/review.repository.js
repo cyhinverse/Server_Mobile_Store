@@ -14,7 +14,7 @@ class ReviewRepository extends BaseRepository {
 		try {
 			const reviews = await this.model
 				.find({ product_id: productId })
-				.populate('user_id', 'name email avatar')
+				.populate('user_id', 'fullName email avatar')
 				.sort(sort)
 				.skip(skip)
 				.limit(limit)
