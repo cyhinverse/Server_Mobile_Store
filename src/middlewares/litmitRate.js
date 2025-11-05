@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 
 export const litmitRate = rateLimit({
 	windowMs: 15 * 60 * 1000,
-	limit: 100,
+	limit: 500, // Tăng lên 500
 	skipSuccessfulRequests: true,
 	standardHeaders: true,
 	legacyHeaders: false,

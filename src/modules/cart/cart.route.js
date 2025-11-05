@@ -32,19 +32,6 @@ router.get(
 );
 
 // ==================== USER ROUTES (Authenticated Users) ====================
-// Cart total route (Own cart only)
-router.get('/total/:userId', authMiddleware, cartController.getCartTotal);
-
-// Check product in cart (Own cart only)
-router.get(
-	'/check/:userId/:productId',
-	authMiddleware,
-	cartController.checkProductInCart
-);
-
-// User-specific cart routes (Own cart only)
-router.get('/user/:userId', authMiddleware, cartController.getCartByUserId);
-
 // Cart operations (Authenticated users - own cart only)
 router.post('/', authMiddleware, cartController.addToCart);
 
@@ -61,5 +48,19 @@ router.delete(
 );
 
 router.delete('/clear/:userId', authMiddleware, cartController.clearCart);
+
+// ==================== USER-SPECIFIC ROUTES (đặt cuối để tránh conflict) ====================
+// Cart total route (Own cart only)
+router.get('/total/:userId', authMiddleware, cartController.getCartTotal);
+
+// Check product in cart (Own cart only)
+router.get(
+	'/check/:userId/:productId',
+	authMiddleware,
+	cartController.checkProductInCart
+);
+
+// User-specific cart routes (Own cart only)
+router.get('/user/:userId', authMiddleware, cartController.getCartByUserId);
 
 export default router;

@@ -610,38 +610,6 @@ class UserController extends BaseController {
 			code: StatusCodes.OK,
 		});
 	});
-
-	/**
-	 * Get students (Admin/Teacher function)
-	 */
-	getStudents = catchAsync(async (req, res) => {
-		const { page = 1, limit = 10 } = req.query;
-
-		const students = await this.userService.getStudents({ page, limit });
-
-		return formatSuccess({
-			res,
-			data: students,
-			message: 'Students retrieved successfully',
-			code: StatusCodes.OK,
-		});
-	});
-
-	/**
-	 * Get teachers (Admin function)
-	 */
-	getTeachers = catchAsync(async (req, res) => {
-		const { page = 1, limit = 10 } = req.query;
-
-		const teachers = await this.userService.getTeachers({ page, limit });
-
-		return formatSuccess({
-			res,
-			data: teachers,
-			message: 'Teachers retrieved successfully',
-			code: StatusCodes.OK,
-		});
-	});
 }
 
 export default new UserController();

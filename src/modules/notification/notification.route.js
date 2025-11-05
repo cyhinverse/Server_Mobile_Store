@@ -4,17 +4,51 @@ import NotificationValidation from './notification.validation.js';
 import { validateData } from '../../middlewares/validation.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
+import internalApiKeyMiddleware from '../../middlewares/internalApiKey.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
 const router = Router();
 
-// Routes cho user (cần auth)
-router.get(
-	'/',
-	authMiddleware,
-	validateData(NotificationValidation.getNotifications, 'query'),
-	notificationController.getUserNotifications
+// ==================== INTERNAL ROUTES (requires internal API key) ====================
+router.post(
+	'/internal/order',
+	internalApiKeyMiddleware,
+	validateData(NotificationValidation.createOrderNotification),
+	notificationController.createOrderNotification
 );
 
+router.post(
+	'/internal/promotion',
+	internalApiKeyMiddleware,
+	validateData(NotificationValidation.createPromotionNotification),
+	notificationController.createPromotionNotification
+);
+
+// ==================== ADMIN ROUTES ====================
+router.post(
+	'/system',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.NOTIFICATION_CREATE]),
+	validateData(NotificationValidation.createSystemNotification),
+	notificationController.createSystemNotification
+);
+
+router.delete(
+	'/cleanup/expired',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.NOTIFICATION_DELETE]),
+	notificationController.cleanupExpiredNotifications
+);
+
+router.get(
+	'/type/:type',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.NOTIFICATION_READ]),
+	validateData(NotificationValidation.getNotifications, 'query'),
+	notificationController.getNotificationsByType
+);
+
+// ==================== USER STATIC ROUTES ====================
 router.get(
 	'/unread-count',
 	authMiddleware,
@@ -24,9 +58,34 @@ router.get(
 router.get(
 	'/stats',
 	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.NOTIFICATION_READ]),
 	notificationController.getNotificationStats
 );
 
+router.patch(
+	'/mark-all-read',
+	authMiddleware,
+	notificationController.markAllAsRead
+);
+
+// Create notification (Admin only)
+router.post(
+	'/',
+	authMiddleware,
+	checkPermission([SYSTEM_PERMISSIONS.NOTIFICATION_CREATE]),
+	validateData(NotificationValidation.createNotification),
+	notificationController.createNotification
+);
+
+// Get user notifications
+router.get(
+	'/',
+	authMiddleware,
+	validateData(NotificationValidation.getNotifications, 'query'),
+	notificationController.getUserNotifications
+);
+
+// ==================== USER DYNAMIC ROUTES (đặt cuối) ====================
 router.get(
 	'/:id',
 	authMiddleware,
@@ -41,62 +100,11 @@ router.patch(
 	notificationController.markAsRead
 );
 
-router.patch(
-	'/mark-all-read',
-	authMiddleware,
-	notificationController.markAllAsRead
-);
-
 router.delete(
 	'/:id',
 	authMiddleware,
 	validateData(NotificationValidation.mongoId, 'params'),
 	notificationController.deleteNotification
-);
-
-// Routes cho admin (cần auth + admin permission)
-router.post(
-	'/',
-	authMiddleware,
-	checkPermission(['notifications.create']),
-	validateData(NotificationValidation.createNotification),
-	notificationController.createNotification
-);
-
-router.post(
-	'/system',
-	authMiddleware,
-	checkPermission(['notifications.create']),
-	validateData(NotificationValidation.createSystemNotification),
-	notificationController.createSystemNotification
-);
-
-router.get(
-	'/type/:type',
-	authMiddleware,
-	checkPermission(['notifications.read']),
-	validateData(NotificationValidation.getNotifications, 'query'),
-	notificationController.getNotificationsByType
-);
-
-router.delete(
-	'/cleanup/expired',
-	authMiddleware,
-	checkPermission(['notifications.delete']),
-	notificationController.cleanupExpiredNotifications
-);
-
-// Routes cho internal services (không cần auth, chỉ dùng trong server)
-router.post(
-	'/internal/order',
-	validateData(NotificationValidation.createOrderNotification),
-	notificationController.createOrderNotification
-);
-
-router.post(
-	'/internal/promotion',
-	validateData(NotificationValidation.createPromotionNotification),
-	notificationController.createPromotionNotification
 );
 
 export default router;

@@ -82,20 +82,18 @@ class CategoryService extends BaseService {
 	/**
 	 * Get categories with pagination
 	 */
-	getCategoriesPaginated = catchAsync(
-		async ({ page = 1, limit = 10, search = '' }) => {
-			// Business logic: Validate pagination parameters
-			if (page < 1) throw new Error('Page must be greater than 0');
-			if (limit < 1 || limit > 100)
-				throw new Error('Limit must be between 1 and 100');
+	getCategoriesPaginated = async ({ page = 1, limit = 10, search = '' }) => {
+		// Business logic: Validate pagination parameters
+		if (page < 1) throw new Error('Page must be greater than 0');
+		if (limit < 1 || limit > 100)
+			throw new Error('Limit must be between 1 and 100');
 
-			return await this.categoryRepo.findWithPagination(
-				parseInt(page),
-				parseInt(limit),
-				search
-			);
-		}
-	);
+		return await this.categoryRepo.findWithPagination(
+			parseInt(page),
+			parseInt(limit),
+			search
+		);
+	};
 
 	/**
 	 * Get children categories by parent ID

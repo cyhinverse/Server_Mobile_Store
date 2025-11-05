@@ -6,10 +6,7 @@ import DiscountController from './discount.controller.js';
 
 const router = express.Router();
 
-// ==================== PUBLIC ROUTES ====================
-// Get all discounts (Public - for display)
-router.get('/', DiscountController.getAll);
-
+// ==================== PUBLIC ROUTES (đặt static routes trước) ====================
 // Get active discounts (Public)
 router.get('/active', DiscountController.getDiscountByActiveStatus);
 
@@ -20,9 +17,6 @@ router.get(
 	checkPermission([SYSTEM_PERMISSIONS.DISCOUNT_READ]),
 	DiscountController.getDiscountByNotActiveStatus
 );
-
-// Get discount by ID (Public)
-router.get('/:id', DiscountController.getById);
 
 // Get discounts by date range (Public)
 router.get('/range/date', DiscountController.getDiscountByStartAndEndDate);
@@ -39,6 +33,12 @@ router.post(
 	checkPermission([SYSTEM_PERMISSIONS.DISCOUNT_CREATE]),
 	DiscountController.create
 );
+
+// Get all discounts (Public - for display)
+router.get('/', DiscountController.getAll);
+
+// Get discount by ID (Public) - đặt cuối để tránh conflict với static routes
+router.get('/:id', DiscountController.getById);
 
 // Update discount (Admin only)
 router.put(

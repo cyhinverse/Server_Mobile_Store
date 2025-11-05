@@ -7,7 +7,14 @@
 		"dev": " nodemon src/index.js",
 		"test": "jest",
 		"lint": "eslint .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"test:load": "node load-tests/quick-test.js",
+		"test:load:artillery": "artillery run load-tests/basic-load-test.yml",
+		"test:load:k6": "k6 run load-tests/k6-load-test.js",
+		"test:load:autocannon": "node load-tests/autocannon-test.js",
+		"test:load:autocannon:advanced": "node load-tests/autocannon-test.js advanced",
+		"test:load:autocannon:stress": "node load-tests/autocannon-test.js stress",
+		"test:load:all": "npm run test:load:autocannon && npm run test:load:artillery"
 	},
 	"keywords": [
 		"mobile",
@@ -56,6 +63,8 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.29.0",
+		"artillery": "^2.0.26",
+		"autocannon": "^8.0.0",
 		"eslint": "^9.29.0",
 		"globals": "^16.2.0",
 		"socket.io-client": "^4.8.1"

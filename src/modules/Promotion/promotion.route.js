@@ -6,10 +6,7 @@ import PromotionController from './promotion.controller.js';
 
 const router = express.Router();
 
-// ==================== PUBLIC ROUTES ====================
-// Get all promotions with pagination and filtering (Public)
-router.get('/', PromotionController.getAllPromotions);
-
+// ==================== PUBLIC ROUTES (đặt static routes trước) ====================
 // Get active promotions only (Public)
 router.get('/active', PromotionController.getActivePromotions);
 
@@ -22,13 +19,16 @@ router.get('/upcoming', PromotionController.getUpcomingPromotions);
 // Get promotions by product ID (Public)
 router.get('/product/:productId', PromotionController.getPromotionsByProduct);
 
-// Get promotion by ID (Public)
+// Get all promotions with pagination and filtering (Public)
+router.get('/', PromotionController.getAllPromotions);
+
+// Get promotion by ID (Public) - đặt cuối để tránh conflict
 router.get('/:id', PromotionController.getPromotionById);
 
 // ==================== ADMIN ROUTES ====================
 // Create a new promotion (Admin only)
 router.post(
-	'/create',
+	'/',
 	authMiddleware,
 	checkPermission([SYSTEM_PERMISSIONS.PROMOTION_CREATE]),
 	PromotionController.createPromotion

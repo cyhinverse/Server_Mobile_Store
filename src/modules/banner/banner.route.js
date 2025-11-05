@@ -2,6 +2,7 @@ import express from 'express';
 import bannerController from './banner.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 router.get(
 	'/stats',
 	authMiddleware,
-	checkPermission('banner:read'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_READ]),
 	bannerController.getBannerStats
 );
 
@@ -23,7 +24,7 @@ router.get('/date-range', bannerController.getBannersByDateRange);
 router.get(
 	'/expired',
 	authMiddleware,
-	checkPermission('banner:read'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_READ]),
 	bannerController.getExpiredBanners
 );
 
@@ -37,14 +38,14 @@ router.get('/position/:position', bannerController.getBannersByPosition);
 router.patch(
 	'/bulk/status',
 	authMiddleware,
-	checkPermission('banner:update'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_UPDATE]),
 	bannerController.bulkUpdateBannerStatus
 );
 
 router.patch(
 	'/reorder',
 	authMiddleware,
-	checkPermission('banner:update'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_UPDATE]),
 	bannerController.reorderBanners
 );
 
@@ -52,7 +53,7 @@ router.patch(
 router.post(
 	'/',
 	authMiddleware,
-	checkPermission('banner:create'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_CREATE]),
 	bannerController.createBanner
 );
 
@@ -63,21 +64,21 @@ router.get('/:id', bannerController.getBannerById);
 router.put(
 	'/:id',
 	authMiddleware,
-	checkPermission('banner:update'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_UPDATE]),
 	bannerController.updateBanner
 );
 
 router.patch(
 	'/:id/position',
 	authMiddleware,
-	checkPermission('banner:update'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_UPDATE]),
 	bannerController.updateBannerPosition
 );
 
 router.delete(
 	'/:id',
 	authMiddleware,
-	checkPermission('banner:delete'),
+	checkPermission([SYSTEM_PERMISSIONS.BANNER_DELETE]),
 	bannerController.deleteBanner
 );
 

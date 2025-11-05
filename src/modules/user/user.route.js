@@ -2,6 +2,7 @@ import express from 'express';
 import userController from './user.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
 const router = express.Router();
 
@@ -23,40 +24,49 @@ router.patch('/me', userController.updateMe);
 // Get user statistics (put this BEFORE other routes with parameters)
 router.get(
 	'/admin/stats',
-	checkPermission(['admin']),
+	checkPermission([SYSTEM_PERMISSIONS.USER_READ]),
 	userController.getUserStats
 );
 
-// Get students (Admin/Teacher)
+// Get all addresses with pagination (Admin only)
 router.get(
-	'/admin/students',
-	checkPermission(['admin']),
-	userController.getStudents
-);
-
-// Get teachers (Admin)
-router.get(
-	'/admin/teachers',
-	checkPermission(['admin']),
-	userController.getTeachers
+	'/admin/addresses/paginated',
+	checkPermission([SYSTEM_PERMISSIONS.USER_READ]),
+	userController.getAllAddressesPaginated
 );
 
 // Create new user
-router.post('/', checkPermission(['admin']), userController.createUser);
+router.post(
+	'/',
+	checkPermission([SYSTEM_PERMISSIONS.USER_CREATE]),
+	userController.createUser
+);
 
 // Get all users with pagination
-router.get('/', checkPermission(['admin']), userController.getAllUsers);
+router.get(
+	'/',
+	checkPermission([SYSTEM_PERMISSIONS.USER_READ]),
+	userController.getAllUsers
+);
 
 // Get user by ID
-router.get('/:userId', checkPermission(['admin']), userController.getUserById);
+router.get(
+	'/:userId',
+	checkPermission([SYSTEM_PERMISSIONS.USER_READ]),
+	userController.getUserById
+);
 
 // Update user
-router.patch('/:userId', checkPermission(['admin']), userController.updateUser);
+router.patch(
+	'/:userId',
+	checkPermission([SYSTEM_PERMISSIONS.USER_UPDATE]),
+	userController.updateUser
+);
 
 // Delete user
 router.delete(
 	'/:userId',
-	checkPermission(['admin']),
+	checkPermission([SYSTEM_PERMISSIONS.USER_DELETE]),
 	userController.deleteUser
 );
 
@@ -97,16 +107,6 @@ router.get('/:userId/addresses/default/get', userController.getDefaultAddress);
 router.get(
 	'/:userId/addresses/count/total',
 	userController.countAddressesByUser
-);
-
-/**
- * ADMIN ADDRESS ROUTES
- */
-// Get all addresses with pagination (Admin only)
-router.get(
-	'/admin/addresses/paginated',
-	checkPermission(['admin']),
-	userController.getAllAddressesPaginated
 );
 
 export default router;

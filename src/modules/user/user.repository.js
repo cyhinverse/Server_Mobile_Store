@@ -248,56 +248,6 @@ class UserRepository extends BaseRepository {
 	async findByPhoneNumber(phoneNumber) {
 		return await this.model.findOne({ phoneNumber }).lean();
 	}
-
-	/**
-	 * Find students with pagination
-	 */
-	async findStudents({ page = 1, limit = 10 }) {
-		const skip = (page - 1) * limit;
-
-		const [students, totalItems] = await Promise.all([
-			this.model
-				.find({ isStudent: true })
-				.select('-password -refreshToken')
-				.sort({ createdAt: -1 })
-				.skip(skip)
-				.limit(limit)
-				.lean(),
-			this.model.countDocuments({ isStudent: true }),
-		]);
-
-		const pagination = getPaginationMeta(page, limit, totalItems);
-
-		return {
-			students,
-			...pagination,
-		};
-	}
-
-	/**
-	 * Find teachers with pagination
-	 */
-	async findTeachers({ page = 1, limit = 10 }) {
-		const skip = (page - 1) * limit;
-
-		const [teachers, totalItems] = await Promise.all([
-			this.model
-				.find({ isTeacher: true })
-				.select('-password -refreshToken')
-				.sort({ createdAt: -1 })
-				.skip(skip)
-				.limit(limit)
-				.lean(),
-			this.model.countDocuments({ isTeacher: true }),
-		]);
-
-		const pagination = getPaginationMeta(page, limit, totalItems);
-
-		return {
-			teachers,
-			...pagination,
-		};
-	}
 }
 
 export default new UserRepository();

@@ -27,19 +27,39 @@ class CategoryRepository extends BaseRepository {
 	}
 
 	/**
-	 * Get categories with pagination and search
+	 * Get categories with pagination and search, including product counts
 	 */
 	async findWithPagination(page = 1, limit = 10, search = '') {
 		const query = search ? { name: { $regex: search, $options: 'i' } } : {};
 		const skip = (page - 1) * limit;
 
-		const categories = await this.model
-			.find(query)
-			.sort({ createdAt: -1 })
-			.skip(skip)
-			.limit(limit)
-			.lean();
+		// Use aggregation to include product counts
+		const pipeline = [
+			{ $match: query },
+			{
+				$lookup: {
+					from: 'products',
+					localField: '_id',
+					foreignField: 'category_id',
+					as: 'products',
+				},
+			},
+			{
+				$addFields: {
+					productCount: { $size: '$products' },
+				},
+			},
+			{
+				$project: {
+					products: 0, // Remove the products array, keep only the count
+				},
+			},
+			{ $sort: { createdAt: -1 } },
+			{ $skip: skip },
+			{ $limit: limit },
+		];
 
+		const categories = await this.model.aggregate(pipeline);
 		const total = await this.model.countDocuments(query);
 
 		return {

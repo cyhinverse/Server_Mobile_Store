@@ -26,9 +26,6 @@ router.get('/tree', CategoryController.getTreeCategories);
 // Get all categories
 router.get('/', CategoryController.getAllCategories);
 
-// Get all categories (alternative endpoint)
-router.get('/all', CategoryController.getAllCategories);
-
 // Get category by slug
 router.get('/slug/:slug', CategoryController.getCategoryBySlug);
 

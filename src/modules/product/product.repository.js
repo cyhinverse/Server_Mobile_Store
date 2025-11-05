@@ -134,6 +134,36 @@ class ProductRepository extends BaseRepository {
 		}
 	}
 
+	// Override update method to include populate
+	async update(id, data) {
+		try {
+			if (!id || !data || typeof data !== 'object') {
+				throw new Error('Invalid ID or data for update');
+			}
+
+			console.log(
+				'ProductRepository update - received data:',
+				JSON.stringify(data, null, 2)
+			);
+
+			const updatedProduct = await this.model
+				.findByIdAndUpdate(id, { $set: data }, { new: true })
+				.populate('category_id');
+
+			if (!updatedProduct) {
+				throw new Error('Product not found for update');
+			}
+
+			console.log(
+				'ProductRepository update - result:',
+				JSON.stringify(updatedProduct, null, 2)
+			);
+			return updatedProduct;
+		} catch (error) {
+			throw new Error('Error updating product: ' + error.message);
+		}
+	}
+
 	// Cập nhật stock
 	async updateStock(productId, quantity) {
 		try {

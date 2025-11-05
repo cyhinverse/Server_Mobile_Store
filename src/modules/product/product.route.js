@@ -5,6 +5,7 @@ import authMiddleware from '../../middlewares/auth.js';
 import checkPermission from '../../middlewares/permission.js';
 import { validateData } from '../../middlewares/validation.js';
 import ValidationProduct from './product.validation.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get('/by-slug/:slug', ProductController.getProductsBySlug);
 router.post(
 	'/',
 	authMiddleware,
-	checkPermission(['product:create']),
+	checkPermission([SYSTEM_PERMISSIONS.PRODUCT_CREATE]),
 	validateData(ValidationProduct.createProduct),
 	ProductController.createProduct
 );
@@ -45,7 +46,7 @@ router.get('/:id', ProductController.getProductById);
 router.put(
 	'/:id',
 	authMiddleware,
-	checkPermission('product:update'),
+	checkPermission([SYSTEM_PERMISSIONS.PRODUCT_UPDATE]),
 	ProductController.updateProduct
 );
 
@@ -53,27 +54,23 @@ router.put(
 router.delete(
 	'/:id',
 	authMiddleware,
-	checkPermission('product:delete'),
+	checkPermission([SYSTEM_PERMISSIONS.PRODUCT_DELETE]),
 	ProductController.deleteProduct
 );
 
 // ===================== NESTED ROUTES =====================
-// Product reviews
-router.get('/:id/reviews', ProductController.getProductReviews);
-router.post('/:id/reviews', authMiddleware, ProductController.addProductReview);
-
 // Quản lý hình ảnh
 router.post(
 	'/:id/images',
 	authMiddleware,
-	checkPermission('product:update'),
+	checkPermission([SYSTEM_PERMISSIONS.PRODUCT_UPDATE]),
 	upload.array('images'),
 	ProductController.addProductImages
 );
 router.delete(
 	'/:id/images/:imageId',
 	authMiddleware,
-	checkPermission('product:update'),
+	checkPermission([SYSTEM_PERMISSIONS.PRODUCT_UPDATE]),
 	ProductController.deleteProductImage
 );
 

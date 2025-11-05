@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 import authRepository from './auth.repository.js';
 import BaseService from '../../core/service/base.service.js';
+import {
+	getPermissionsByRole,
+	validatePermissions,
+} from '../../configs/permission.config.js';
 dotenv.config();
 class AuthService extends BaseService {
 	constructor() {
@@ -36,12 +40,30 @@ class AuthService extends BaseService {
 		if (!id || !permissions) {
 			throw new Error('User ID and permissions are required');
 		}
+
+		// Validate permissions before assigning
+		const validation = validatePermissions(permissions);
+		if (!validation.valid) {
+			throw new Error(
+				`Invalid permission(s): ${validation.invalid.join(', ')}`
+			);
+		}
+
 		return this.authRepo.assignPermissions(id, permissions);
 	}
 	async revokePermissions(userId, permissions) {
 		if (!userId || !permissions) {
 			throw new Error('User ID and permissions are required');
 		}
+
+		// Validate permissions before revoking
+		const validation = validatePermissions(permissions);
+		if (!validation.valid) {
+			throw new Error(
+				`Invalid permission(s): ${validation.invalid.join(', ')}`
+			);
+		}
+
 		return this.authRepo.revokePermissions(userId, permissions);
 	}
 	async getUserWithPermissions(userId) {
@@ -54,12 +76,32 @@ class AuthService extends BaseService {
 		if (!userId || !role) {
 			throw new Error('User ID and role are required');
 		}
-		return this.authRepo.updateRoleForUser(userId, role);
+
+		// Get user first
+		const user = await this.authRepo.findById(userId);
+		if (!user) {
+			throw new Error('User not found');
+		}
+
+		// Update role
+		const updatedUser = await this.authRepo.updateRoleForUser(userId, role);
+
+		// Populate permissions based on new role
+		const permissions = getPermissionsByRole(role);
+		await this.authRepo.update(userId, { permissions });
+
+		return updatedUser;
 	}
 	async create(userData) {
 		if (!userData) {
 			throw new Error('User data is required for creation');
 		}
+
+		// Auto-populate permissions based on role
+		if (!userData.permissions && userData.role) {
+			userData.permissions = getPermissionsByRole(userData.role);
+		}
+
 		return this.authRepo.create(userData);
 	}
 	async checkUserExists(email) {

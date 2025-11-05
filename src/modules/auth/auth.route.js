@@ -4,6 +4,7 @@ import AuthController from './auth.controller.js';
 import { litmitRate } from '../../middlewares/litmitRate.js';
 import checkPermission from '../../middlewares/permission.js';
 import authMiddleware from '../../middlewares/auth.js';
+import { SYSTEM_PERMISSIONS } from '../../configs/permission.config.js';
 
 const router = express.Router();
 
@@ -56,7 +57,7 @@ router.post(
 	// Xác minh người dùng đã được xác thực trước khi tiếp tục
 	authMiddleware,
 	// Kiểm tra xem người dùng có quyền cập nhật vai trò không
-	checkPermission('roles.update'),
+	checkPermission([SYSTEM_PERMISSIONS.ROLES_UPDATE]),
 	// Thực thi logic gán quyền
 	AuthController.assignPermissions
 );
@@ -67,9 +68,20 @@ router.post(
 	// Xác minh người dùng đã được xác thực trước khi tiếp tục
 	authMiddleware,
 	// Kiểm tra xem người dùng có quyền thu hồi quyền không
-	checkPermission('permissions.revoke'),
+	checkPermission([SYSTEM_PERMISSIONS.PERMISSIONS_REVOKE]),
 	// Thực thi logic thu hồi quyền
 	AuthController.revokePermissions
+);
+
+// GET /users/roles - Lấy người dùng được nhóm theo vai trò (đặt trước để tránh conflict với :userId)
+router.get(
+	'/users/roles',
+	// Xác minh người dùng đã được xác thực trước khi tiếp tục
+	authMiddleware,
+	// Kiểm tra xem người dùng có quyền xem quyền/vai trò không
+	checkPermission([SYSTEM_PERMISSIONS.PERMISSIONS_VIEW]),
+	// Thực thi logic lấy người dùng theo vai trò
+	AuthController.getUsersByRole
 );
 
 // GET /users/:userId/permissions - Lấy tất cả quyền cho một người dùng cụ thể
@@ -78,20 +90,9 @@ router.get(
 	// Xác minh người dùng đã được xác thực trước khi tiếp tục
 	authMiddleware,
 	// Kiểm tra xem người dùng có quyền xem quyền không
-	checkPermission('permissions.view'),
+	checkPermission([SYSTEM_PERMISSIONS.PERMISSIONS_VIEW]),
 	// Thực thi logic lấy quyền người dùng
 	AuthController.getUserPermissions
-);
-
-// GET /users/roles - Lấy người dùng được nhóm theo vai trò được gán
-router.get(
-	'/users/roles',
-	// Xác minh người dùng đã được xác thực trước khi tiếp tục
-	authMiddleware,
-	// Kiểm tra xem người dùng có quyền xem quyền/vai trò không
-	checkPermission('permissions.view'),
-	// Thực thi logic lấy người dùng theo vai trò
-	AuthController.getUsersByRole
 );
 
 // POST /roles/:userId/assign - Gán vai trò cho một người dùng cụ thể
@@ -100,7 +101,7 @@ router.post(
 	// Xác minh người dùng đã được xác thực trước khi tiếp tục
 	authMiddleware,
 	// Kiểm tra xem người dùng có quyền xem/quản lý vai trò không
-	checkPermission('roles.view'),
+	checkPermission([SYSTEM_PERMISSIONS.ROLES_UPDATE]),
 	// Thực thi logic gán vai trò
 	AuthController.assignRoleToUser
 );
@@ -110,7 +111,7 @@ router.post(
 	// Xác minh người dùng đã được xác thực trước khi tiếp tục
 	authMiddleware,
 	// Kiểm tra xem người dùng có quyền xem/quản lý vai trò không
-	checkPermission('roles.view'),
+	checkPermission([SYSTEM_PERMISSIONS.ROLES_UPDATE]),
 	// Thực thi logic thu hồi vai trò
 	AuthController.revokeRoleFromUser
 );

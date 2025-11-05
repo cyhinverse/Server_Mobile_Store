@@ -1,83 +1,83 @@
 export const SYSTEM_PERMISSIONS = {
 	// ==================== USER MANAGEMENT ====================
-	USER_CREATE: 'users.create',
-	USER_READ: 'users.read',
-	USER_UPDATE: 'users.update',
-	USER_DELETE: 'users.delete',
+	USER_CREATE: 'users.create', // ✅ Enforced in user.route.js
+	USER_READ: 'users.read', // ✅ Enforced in user.route.js
+	USER_UPDATE: 'users.update', // ✅ Enforced in user.route.js
+	USER_DELETE: 'users.delete', // ✅ Enforced in user.route.js
 
 	// ==================== PRODUCT MANAGEMENT ====================
-	PRODUCT_CREATE: 'products.create', // Also used as: 'product:create'
-	PRODUCT_READ: 'products.read', // Also used as: 'product:read'
-	PRODUCT_UPDATE: 'products.update', // Also used as: 'product:update'
-	PRODUCT_DELETE: 'products.delete', // Also used as: 'product:delete'
+	PRODUCT_CREATE: 'products.create', // ✅ Enforced in product.route.js
+	PRODUCT_READ: 'products.read', // Public routes, no enforcement needed
+	PRODUCT_UPDATE: 'products.update', // ✅ Enforced in product.route.js
+	PRODUCT_DELETE: 'products.delete', // ✅ Enforced in product.route.js
 
 	// ==================== ORDER MANAGEMENT ====================
-	ORDER_CREATE: 'orders.create',
-	ORDER_READ: 'orders.read',
-	ORDER_UPDATE: 'orders.update',
-	ORDER_DELETE: 'orders.delete',
+	ORDER_CREATE: 'orders.create', // User operation (authenticated only, no permission check)
+	ORDER_READ: 'orders.read', // ✅ Enforced in order.route.js (admin routes)
+	ORDER_UPDATE: 'orders.update', // ✅ Enforced in order.route.js
+	ORDER_DELETE: 'orders.delete', // ✅ Enforced in order.route.js
 
 	// ==================== CATEGORY MANAGEMENT ====================
-	CATEGORY_CREATE: 'categories.create', // Currently NOT enforced in routes
-	CATEGORY_READ: 'categories.read', // Currently NOT enforced in routes
-	CATEGORY_UPDATE: 'categories.update', // Currently NOT enforced in routes
-	CATEGORY_DELETE: 'categories.delete', // Currently NOT enforced in routes
+	CATEGORY_CREATE: 'categories.create', // ✅ Enforced in category.route.js
+	CATEGORY_READ: 'categories.read', // Public routes, no enforcement needed
+	CATEGORY_UPDATE: 'categories.update', // ✅ Enforced in category.route.js
+	CATEGORY_DELETE: 'categories.delete', // ✅ Enforced in category.route.js
 
 	// ==================== BRAND MANAGEMENT ====================
-	BRAND_CREATE: 'brands.create', // Currently NOT enforced in routes
-	BRAND_READ: 'brands.read', // Currently NOT enforced in routes
-	BRAND_UPDATE: 'brands.update', // Currently NOT enforced in routes
-	BRAND_DELETE: 'brands.delete', // Currently NOT enforced in routes
+	BRAND_CREATE: 'brands.create', // ✅ Enforced in brand.route.js
+	BRAND_READ: 'brands.read', // Public routes, no enforcement needed
+	BRAND_UPDATE: 'brands.update', // ✅ Enforced in brand.route.js
+	BRAND_DELETE: 'brands.delete', // ✅ Enforced in brand.route.js
 
 	// ==================== BANNER MANAGEMENT ====================
-	BANNER_CREATE: 'banner:create', // Used in banner.route.js
-	BANNER_READ: 'banner:read', // Used in banner.route.js
-	BANNER_UPDATE: 'banner:update', // Used in banner.route.js
-	BANNER_DELETE: 'banner:delete', // Used in banner.route.js
+	BANNER_CREATE: 'banners.create', // ✅ Enforced in banner.route.js
+	BANNER_READ: 'banners.read', // ✅ Enforced in banner.route.js
+	BANNER_UPDATE: 'banners.update', // ✅ Enforced in banner.route.js
+	BANNER_DELETE: 'banners.delete', // ✅ Enforced in banner.route.js
 
 	// ==================== CART MANAGEMENT ====================
-	CART_CREATE: 'cart:create', // User cart operations (no permission required, authenticated only)
-	CART_READ: 'cart:read', // Admin: stats, pagination, abandoned carts
-	CART_UPDATE: 'cart:update', // User cart operations (no permission required, authenticated only)
-	CART_DELETE: 'cart:delete', // User cart operations (no permission required, authenticated only)
+	CART_CREATE: 'carts.create', // User cart operations (authenticated only, no permission check)
+	CART_READ: 'carts.read', // ✅ Enforced in cart.route.js (admin stats)
+	CART_UPDATE: 'carts.update', // User cart operations (authenticated only, no permission check)
+	CART_DELETE: 'carts.delete', // User cart operations (authenticated only, no permission check)
 
 	// ==================== DISCOUNT MANAGEMENT ====================
-	DISCOUNT_CREATE: 'discounts.create', // Currently NOT enforced in routes
-	DISCOUNT_READ: 'discounts.read', // Currently NOT enforced in routes
-	DISCOUNT_UPDATE: 'discounts.update', // Currently NOT enforced in routes
-	DISCOUNT_DELETE: 'discounts.delete', // Currently NOT enforced in routes
-	DISCOUNT_APPLY: 'discounts.apply', // Currently NOT enforced in routes
+	DISCOUNT_CREATE: 'discounts.create', // ✅ Enforced in discount.route.js
+	DISCOUNT_READ: 'discounts.read', // ✅ Enforced in discount.route.js
+	DISCOUNT_UPDATE: 'discounts.update', // ✅ Enforced in discount.route.js
+	DISCOUNT_DELETE: 'discounts.delete', // ✅ Enforced in discount.route.js
+	DISCOUNT_APPLY: 'discounts.apply', // User operation (authenticated only, no permission check)
 
 	// ==================== NOTIFICATION MANAGEMENT ====================
-	NOTIFICATION_CREATE: 'notifications.create', // Admin: create notifications, system notifications
-	NOTIFICATION_READ: 'notifications.read', // Admin: get by type
-	NOTIFICATION_UPDATE: 'notifications.update', // Currently NOT enforced in routes
-	NOTIFICATION_DELETE: 'notifications.delete', // Admin: cleanup expired notifications
+	NOTIFICATION_CREATE: 'notifications.create', // ✅ Enforced in notification.route.js
+	NOTIFICATION_READ: 'notifications.read', // ✅ Enforced in notification.route.js
+	NOTIFICATION_UPDATE: 'notifications.update', // Not used (notifications are read-only after creation)
+	NOTIFICATION_DELETE: 'notifications.delete', // ✅ Enforced in notification.route.js
 
 	// ==================== REVIEW MANAGEMENT ====================
-	REVIEW_CREATE: 'reviews.create', // Currently NOT enforced in routes
-	REVIEW_READ: 'reviews.read', // Currently NOT enforced in routes
-	REVIEW_UPDATE: 'reviews.update', // Currently NOT enforced in routes
-	REVIEW_DELETE: 'reviews.delete', // Currently NOT enforced in routes
-	REVIEW_MODERATE: 'reviews.moderate', // For admin review management
+	REVIEW_CREATE: 'reviews.create', // User operation (authenticated only, no permission check)
+	REVIEW_READ: 'reviews.read', // ✅ Enforced in review.route.js (admin routes)
+	REVIEW_UPDATE: 'reviews.update', // User can update own reviews (authenticated only)
+	REVIEW_DELETE: 'reviews.delete', // User can delete own reviews (authenticated only)
+	REVIEW_MODERATE: 'reviews.moderate', // ⚠️ Deprecated - Use REVIEW_READ/UPDATE instead
 
 	// ==================== WISHLIST MANAGEMENT ====================
-	WISHLIST_CREATE: 'wishlists.create', // Currently NOT enforced in routes
-	WISHLIST_READ: 'wishlists.read', // Currently uses ['admin'] role check
-	WISHLIST_UPDATE: 'wishlists.update', // Currently NOT enforced in routes
-	WISHLIST_DELETE: 'wishlists.delete', // Currently NOT enforced in routes
+	WISHLIST_CREATE: 'wishlist.create', // User operation (authenticated only, no permission check)
+	WISHLIST_READ: 'wishlist.read', // ✅ Enforced in wishlist.route.js (admin routes)
+	WISHLIST_UPDATE: 'wishlist.update', // User operation (authenticated only, no permission check)
+	WISHLIST_DELETE: 'wishlist.delete', // User operation (authenticated only, no permission check)
 
 	// ==================== PROMOTION MANAGEMENT ====================
-	PROMOTION_CREATE: 'promotions.create', // Currently NOT enforced in routes
-	PROMOTION_READ: 'promotions.read', // Currently NOT enforced in routes
-	PROMOTION_UPDATE: 'promotions.update', // Currently NOT enforced in routes
-	PROMOTION_DELETE: 'promotions.delete', // Currently NOT enforced in routes
+	PROMOTION_CREATE: 'promotions.create', // ✅ Enforced in promotion.route.js
+	PROMOTION_READ: 'promotions.read', // Public routes, no enforcement needed
+	PROMOTION_UPDATE: 'promotions.update', // ✅ Enforced in promotion.route.js
+	PROMOTION_DELETE: 'promotions.delete', // ✅ Enforced in promotion.route.js
 
 	// ==================== ROLE & PERMISSION MANAGEMENT ====================
-	ROLES_VIEW: 'roles.view', // Used in auth.route.js
-	ROLES_UPDATE: 'roles.update', // Used in auth.route.js
-	PERMISSIONS_VIEW: 'permissions.view', // Used in auth.route.js
-	PERMISSIONS_REVOKE: 'permissions.revoke', // Used in auth.route.js
+	ROLES_VIEW: 'roles.view', // Public route, no enforcement needed
+	ROLES_UPDATE: 'roles.update', // ✅ Enforced in auth.route.js
+	PERMISSIONS_VIEW: 'permissions.view', // ✅ Enforced in auth.route.js
+	PERMISSIONS_REVOKE: 'permissions.revoke', // ✅ Enforced in auth.route.js
 };
 
 /**
@@ -108,37 +108,21 @@ const USER_PERMISSIONS = [
 	SYSTEM_PERMISSIONS.PROMOTION_READ,
 ];
 
-const SELLER_PERMISSIONS = [
-	...USER_PERMISSIONS,
-	SYSTEM_PERMISSIONS.PRODUCT_CREATE,
-	SYSTEM_PERMISSIONS.PRODUCT_UPDATE,
-	SYSTEM_PERMISSIONS.ORDER_UPDATE,
-	SYSTEM_PERMISSIONS.DISCOUNT_CREATE,
-	SYSTEM_PERMISSIONS.DISCOUNT_UPDATE,
-	SYSTEM_PERMISSIONS.DISCOUNT_DELETE,
-	SYSTEM_PERMISSIONS.PROMOTION_CREATE,
-	SYSTEM_PERMISSIONS.PROMOTION_UPDATE,
-	SYSTEM_PERMISSIONS.PROMOTION_DELETE,
-];
-
 export const PERMISSION_GROUPS = {
 	// Admin has all permissions
 	ADMIN: Object.values(SYSTEM_PERMISSIONS),
 
-	// User basic permissions
+	// User basic permissions (read-only + own data management)
 	USER: USER_PERMISSIONS,
-
-	// Seller/Manager permissions
-	SELLER: SELLER_PERMISSIONS,
 };
 
 /**
  * ROLE DEFINITIONS
+ * Only 'user' and 'admin' roles exist in the system
  */
 export const SYSTEM_ROLES = {
 	ADMIN: 'admin',
 	USER: 'user',
-	SELLER: 'seller',
 };
 
 /**
@@ -161,4 +145,35 @@ export function isValidPermission(permission) {
 		p.replace(':', '.')
 	);
 	return allPermissions.includes(normalized);
+}
+
+/**
+ * Validate an array of permissions
+ * Checks if all permissions in the array are valid and defined in SYSTEM_PERMISSIONS
+ *
+ * @param {string[]} permissions - Array of permission strings to validate
+ * @returns {Object} - { valid: boolean, invalid: string[] }
+ */
+export function validatePermissions(permissions) {
+	if (!Array.isArray(permissions)) {
+		return { valid: false, invalid: ['Input must be an array'] };
+	}
+
+	const invalid = permissions.filter((p) => !isValidPermission(p));
+
+	return {
+		valid: invalid.length === 0,
+		invalid: invalid,
+	};
+}
+
+/**
+ * Get all permissions for a specific role
+ *
+ * @param {string} role - Role name (admin, user, seller)
+ * @returns {string[]} - Array of permission strings
+ */
+export function getPermissionsByRole(role) {
+	const roleUpper = role?.toUpperCase();
+	return PERMISSION_GROUPS[roleUpper] || PERMISSION_GROUPS.USER;
 }

@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import BaseService from '../../core/service/base.service.js';
 import userRepository from './user.repository.js';
 import { hashPassword } from '../../utils/password.util.js';
+import { getPermissionsByRole } from '../../configs/permission.config.js';
 
 class UserService extends BaseService {
 	constructor() {
@@ -29,11 +30,16 @@ class UserService extends BaseService {
 		// Hash password
 		const hashedPassword = await hashPassword(password);
 
+		// Auto-populate permissions based on role
+		const userRole = roles || 'user';
+		const permissions = getPermissionsByRole(userRole);
+
 		const newUser = {
 			fullName,
 			email,
 			password: hashedPassword,
-			roles: roles || 'user',
+			roles: userRole,
+			permissions: permissions,
 		};
 
 		const createdUser = await this.userRepo.create(newUser);
@@ -395,20 +401,6 @@ class UserService extends BaseService {
 		});
 
 		return { verified: true };
-	};
-
-	/**
-	 * Get students (Admin/Teacher function)
-	 */
-	getStudents = async ({ page, limit }) => {
-		return await this.userRepo.findStudents({ page, limit });
-	};
-
-	/**
-	 * Get teachers (Admin function)
-	 */
-	getTeachers = async ({ page, limit }) => {
-		return await this.userRepo.findTeachers({ page, limit });
 	};
 }
 

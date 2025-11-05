@@ -30,6 +30,18 @@ router.put(
 	BrandController.update
 );
 
+// Get only active brands (đặt static routes trước)
+router.get('/active', BrandController.getActiveBrands);
+
+// Get brands with pagination and search
+router.get('/', BrandController.getBrandsPaginated);
+
+// Get a brand by name
+router.get('/name/:name', BrandController.getBrandByName);
+
+// Get a brand by ID (đặt cuối để tránh conflict)
+router.get('/:id', BrandController.getById);
+
 // Toggle brand status (Admin only)
 router.patch(
 	'/:id/toggle-status',
@@ -37,20 +49,5 @@ router.patch(
 	checkPermission([SYSTEM_PERMISSIONS.BRAND_UPDATE]),
 	BrandController.toggleBrandStatus
 );
-
-// Get all brands
-router.get('/all', BrandController.getAll);
-
-// Get only active brands
-router.get('/active', BrandController.getActiveBrands);
-
-// Get brands with pagination and search
-router.get('/', BrandController.getBrandsPaginated);
-
-// Get a brand by ID
-router.get('/:id', BrandController.getById);
-
-// Get a brand by name
-router.get('/name/:name', BrandController.getBrandByName);
 
 export default router;
